@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}About Us - Telemedicine Platform{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .about-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 3rem;
+        }
+
+        .about-hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .section {
+            margin: 3rem 0;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .section p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .values {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .value-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .value-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .value-card h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .team {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .team-member {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .member-avatar {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .member-info {
+            padding: 1rem;
+        }
+
+        .member-name {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .member-role {
+            color: #667eea;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .member-bio {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .about-hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .section h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="about-hero">
+        <h1>About Telemedicine</h1>
+        <p>Making healthcare accessible to everyone, everywhere</p>
+    </div>
+
+    <div class="section">
+        <h2>Our Mission</h2>
+        <p>
+            At Telemedicine, we believe that quality healthcare should be accessible to everyone, regardless of their location 
+            or circumstances. Our mission is to bridge the gap between patients and healthcare providers by leveraging modern 
+            technology to deliver convenient, affordable, and quality medical services.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Our Values</h2>
+        <div class="values">
+            <div class="value-card">
+                <div class="value-icon">🏥</div>
+                <h3>Quality Care</h3>
+                <p>We're committed to providing the highest standard of healthcare services through experienced professionals.</p>
+            </div>
+            <div class="value-card">
+                <div class="value-icon">🔒</div>
+                <h3>Privacy & Security</h3>
+                <p>Your health data is protected with industry-leading security measures and HIPAA compliance.</p>
+            </div>
+            <div class="value-card">
+                <div class="value-icon">💚</div>
+                <h3>Compassion</h3>
+                <p>We treat every patient with empathy and respect, understanding the importance of healthcare.</p>
+            </div>
+            <div class="value-card">
+                <div class="value-icon">🚀</div>
+                <h3>Innovation</h3>
+                <p>We continuously improve our platform with cutting-edge technology and user feedback.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Our Story</h2>
+        <p>
+            Founded in 2024, Telemedicine was born out of a vision to transform healthcare delivery. During challenging times 
+            when access to healthcare became difficult, our team recognized the need for a reliable, easy-to-use telemedicine platform.
+        </p>
+        <p>
+            Today, we serve thousands of patients and hundreds of healthcare providers across the region, facilitating tens of 
+            thousands of consultations and improving lives through accessible healthcare.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Our Team</h2>
+        <div class="team">
+            <div class="team-member">
+                <div class="member-avatar">👨‍💼</div>
+                <div class="member-info">
+                    <div class="member-name">John Smith</div>
+                    <div class="member-role">Founder & CEO</div>
+                    <div class="member-bio">Healthcare entrepreneur with 10+ years of experience in medical technology.</div>
+                </div>
+            </div>
+            <div class="team-member">
+                <div class="member-avatar">👩‍⚕️</div>
+                <div class="member-info">
+                    <div class="member-name">Dr. Sarah Johnson</div>
+                    <div class="member-role">Chief Medical Officer</div>
+                    <div class="member-bio">Board-certified physician ensuring clinical excellence across the platform.</div>
+                </div>
+            </div>
+            <div class="team-member">
+                <div class="member-avatar">👨‍💻</div>
+                <div class="member-info">
+                    <div class="member-name">Michael Chen</div>
+                    <div class="member-role">CTO</div>
+                    <div class="member-bio">Technology leader building scalable healthcare solutions.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Why Choose Us?</h2>
+        <ul style="color: #666; line-height: 1.8;">
+            <li>✓ Licensed and verified healthcare professionals</li>
+            <li>✓ HIPAA compliant and secure platform</li>
+            <li>✓ Affordable pricing with transparent billing</li>
+            <li>✓ 24/7 customer support</li>
+            <li>✓ Easy appointment scheduling</li>
+            <li>✓ Digital prescription delivery</li>
+            <li>✓ Comprehensive medical records management</li>
+        </ul>
+    </div>
+{% endblock %}
