@@ -13,6 +13,7 @@ class PatientProfile(models.Model):
     date_of_birth = models.DateField(null=True, blank=True)
     medical_history = models.TextField(blank=True, help_text="Patient medical history")
     allergies = models.TextField(blank=True, help_text="Known allergies")
+    current_diseases = models.TextField(blank=True, help_text="Current health conditions/diseases")
     emergency_contact = models.CharField(max_length=100, blank=True)
     emergency_phone = models.CharField(
         max_length=15,
