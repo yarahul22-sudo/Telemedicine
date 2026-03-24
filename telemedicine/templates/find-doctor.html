@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}Find Doctor - Quick Action{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 2rem auto; padding: 0 2rem;">
+    <h1 style="color: #667eea; margin-bottom: 2rem;">Find Your Doctor - Quick Action</h1>
+    
+    <!-- Quick Action Section -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+        
+        <!-- Search by Specialty -->
+        <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="color: #667eea; margin-bottom: 1rem;">🏥 Search by Specialty</h3>
+            <form id="searchForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <select name="specialty" id="specialty" style="padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">Select a Specialty</option>
+                    <option value="cardiology">Cardiology</option>
+                    <option value="neurology">Neurology</option>
+                    <option value="orthopedics">Orthopedics</option>
+                    <option value="dermatology">Dermatology (Skin)</option>
+                    <option value="gynecology">Gynecology</option>
+                    <option value="psychiatry">Psychiatry</option>
+                    <option value="pediatrics">Pediatrics</option>
+                    <option value="general">General Practitioner</option>
+                </select>
+                <button type="button" onclick="searchDoctors()" style="padding: 0.75rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                    Search Doctors
+                </button>
+            </form>
+        </div>
+
+        <!-- Search by Disease -->
+        <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="color: #667eea; margin-bottom: 1rem;">🔍 Search by Disease</h3>
+            <form id="diseaseForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <input type="text" id="diseaseInput" placeholder="e.g., Skin Disease, Heart Problem" style="padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px;">
+                <button type="button" onclick="searchByDisease()" style="padding: 0.75rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                    Find Doctor
+                </button>
+            </form>
+        </div>
+
+        <!-- Get Recommendations -->
+        <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="color: #667eea; margin-bottom: 1rem;">⭐ Get Recommended Doctors</h3>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Based on your medical profile</p>
+            <button type="button" onclick="getRecommendations()" style="padding: 0.75rem; width: 100%; background: #764ba2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                Get Recommendations
+            </button>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results" style="display: none; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h2 style="color: #667eea; margin-bottom: 1.5rem;">Available Doctors</h2>
+        <div id="doctorsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+            <!-- Doctors will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading" style="display: none; text-align: center; padding: 2rem;">
+        <p style="color: #667eea; font-weight: bold;">Loading doctors...</p>
+    </div>
+</div>
+
+<script>
+    const API_BASE = '/api/appointments';
+
+    async function searchDoctors() {
+        const specialty = document.getElementById('specialty').value;
+        if (!specialty) {
+            alert('Please select a specialty');
+            return;
+        }
+        fetchDoctors(`${API_BASE}/doctors/search/?specialty=${specialty}`);
+    }
+
+    async function searchByDisease() {
+        const disease = document.getElementById('diseaseInput').value;
+        if (!disease) {
+            alert('Please enter a disease');
+            return;
+        }
+        fetchDoctors(`${API_BASE}/doctors/search/?disease=${disease}`);
+    }
+
+    async function getRecommendations() {
+        fetchDoctors(`${API_BASE}/doctors/recommended/`);
+    }
+
+    async function fetchDoctors(url) {
+        showLoading(true);
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            
+            const doctors = await response.json();
+            displayDoctors(doctors);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error loading doctors: ' + error.message + '. Please try again.');
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function displayDoctors(doctors) {
+        const doctorsList = document.getElementById('doctorsList');
+        const resultsDiv = document.getElementById('results');
+        
+        if (doctors.length === 0) {
+            doctorsList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999;">No doctors found. Please try different criteria.</p>';
+        } else {
+            doctorsList.innerHTML = doctors.map(doctor => `
+                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; background: #667eea; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.5rem;">
+                            ${doctor.full_name.charAt(0)}
+                        </div>
+                        <div>
+                            <p style="font-weight: bold; margin-bottom: 0.25rem;">${doctor.full_name}</p>
+                            <p style="color: #667eea; font-size: 0.9rem; font-weight: 600;">${doctor.specialization_display}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem; fontSize: 0.9rem;">
+                        <p><strong>Experience:</strong> ${doctor.experience_years} years</p>
+                        <p><strong>Rating:</strong> ⭐ ${doctor.rating}/5</p>
+                        <p><strong>Consultation Fee:</strong> $${doctor.consultation_fee}</p>
+                        <p><strong>Qualification:</strong> ${doctor.qualification}</p>
+                    </div>
+                    
+                    <p style="color: #666; font-size: 0.85rem; margin-bottom: 1rem; line-height: 1.4;">${doctor.bio || 'Professional telemedicine consultant'}</p>
+                    
+                    <button onclick="bookAppointment(${doctor.id})" style="width: 100%; padding: 0.75rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                        Book Appointment
+                    </button>
+                </div>
+            `).join('');
+        }
+        resultsDiv.style.display = 'block';
+        resultsDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function bookAppointment(doctorId) {
+        // Store doctor ID and redirect to booking form
+        localStorage.setItem('selectedDoctorId', doctorId);
+        window.location.href = `/appointments/book/?doctor_id=${doctorId}`;
+    }
+
+    function showLoading(show) {
+        document.getElementById('loading').style.display = show ? 'block' : 'none';
+    }
+
+    function getCsrfToken() {
+        // Get CSRF token from cookie or meta tag
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue || document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Telemedicine Platform{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4rem 0;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 3rem;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hero-buttons .btn {
+            font-size: 1.1rem;
+            padding: 1rem 2rem;
+        }
+
+        .hero-buttons .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+        }
+
+        .hero-buttons .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .features {
+            margin: 3rem 0;
+        }
+
+        .features h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+        }
+
+        .feature-card {
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            margin-bottom: 0.5rem;
+            color: #667eea;
+        }
+
+        .stats {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin: 3rem 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem;
+            border-radius: 8px;
+            text-align: center;
+            margin: 3rem 0;
+        }
+
+        .cta-section h2 {
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        .cta-section p {
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .testimonials {
+            margin: 3rem 0;
+        }
+
+        .testimonials h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+        }
+
+        .testimonial-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .testimonial-text {
+            font-style: italic;
+            margin-bottom: 1rem;
+            color: #666;
+        }
+
+        .testimonial-author {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .testimonial-role {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .how-it-works {
+            margin: 3rem 0;
+        }
+
+        .how-it-works h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+
+        .step {
+            text-align: center;
+            position: relative;
+        }
+
+        .step-number {
+            display: inline-flex;
+            width: 50px;
+            height: 50px;
+            background-color: #667eea;
+            color: white;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .step h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+            }
+
+            .hero-buttons .btn {
+                width: 100%;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Welcome to Telemedicine</h1>
+        <p>Connect with healthcare professionals anytime, anywhere</p>
+        <div class="hero-buttons">
+            {% if user.is_authenticated %}
+                <a href="/dashboard/" class="btn">Go to Dashboard</a>
+            {% else %}
+                <a href="/register/" class="btn">Get Started</a>
+                <a href="/login/" class="btn btn-secondary">Sign In</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <div class="stats">
+        <div class="stat-item">
+            <div class="stat-number">10,000+</div>
+            <div class="stat-label">Active Users</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">500+</div>
+            <div class="stat-label">Licensed Doctors</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">50,000+</div>
+            <div class="stat-label">Consultations Completed</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Customer Support</div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section class="features">
+        <h2>Why Choose Us?</h2>
+        <div class="grid">
+            <div class="card feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Easy Access</h3>
+                <p>Connect with doctors from the comfort of your home. No waiting rooms, no travel time.</p>
+            </div>
+            <div class="card feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Secure & Private</h3>
+                <p>HIPAA compliant secure platform with end-to-end encryption for your privacy.</p>
+            </div>
+            <div class="card feature-card">
+                <div class="feature-icon">💰</div>
+                <h3>Affordable</h3>
+                <p>Competitive pricing with transparent billing. No hidden charges.</p>
+            </div>
+            <div class="card feature-card">
+                <div class="feature-icon">⏱️</div>
+                <h3>Time Saving</h3>
+                <p>Save time with quick consultations and instant appointment booking.</p>
+            </div>
+            <div class="card feature-card">
+                <div class="feature-icon">📋</div>
+                <h3>Medical Records</h3>
+                <p>Keep all your medical records organized and accessible in one place.</p>
+            </div>
+            <div class="card feature-card">
+                <div class="feature-icon">🔔</div>
+                <h3>Smart Reminders</h3>
+                <p>Get appointment reminders and health tips sent to your device.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works">
+        <h2>How It Works</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Sign Up</h3>
+                <p>Create your account with basic information.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Choose Doctor</h3>
+                <p>Browse and select from our network of licensed doctors.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Consult</h3>
+                <p>Have a video consultation with your chosen doctor.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <h3>Get Care</h3>
+                <p>Receive prescriptions and follow-up care instructions.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials">
+        <h2>What Our Users Say</h2>
+        <div class="grid">
+            <div class="testimonial-card">
+                <div class="testimonial-text">"The convenience of consulting from home saved me so much time. Highly recommended!"</div>
+                <div class="testimonial-author">Sarah Johnson</div>
+                <div class="testimonial-role">Patient</div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-text">"Great platform. The video quality is excellent and the appointment system is seamless."</div>
+                <div class="testimonial-author">Dr. Michael Chen</div>
+                <div class="testimonial-role">Doctor</div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-text">"Fast response time, professional doctors, and fair pricing. Couldn't ask for better!"</div>
+                <div class="testimonial-author">Emily Rodriguez</div>
+                <div class="testimonial-role">Patient</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <h2>Ready to Experience Better Healthcare?</h2>
+        <p>Join thousands of satisfied patients and doctors today</p>
+        {% if user.is_authenticated %}
+            <a href="/dashboard/" class="btn">Start Using Telemedicine</a>
+        {% else %}
+            <a href="/register/" class="btn">Sign Up Now</a>
+        {% endif %}
+    </section>
+{% endblock %}

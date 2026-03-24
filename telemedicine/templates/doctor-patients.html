@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}My Patients - Doctor Dashboard{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 2rem auto; padding: 0 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <h1 style="color: #667eea;">My Patients</h1>
+        <button onclick="location.reload()" style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+            Refresh
+        </button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" style="text-align: center; padding: 2rem;">
+        <p style="color: #667eea; font-weight: bold;">Loading your patients...</p>
+    </div>
+
+    <!-- Patients List -->
+    <div id="patientsList" style="display: none;">
+        <div id="patientsContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 2rem;">
+            <!-- Patient cards will be loaded here -->
+        </div>
+        <div id="noPatients" style="display: none; background: white; padding: 2rem; border-radius: 8px; text-align: center; color: #999;">
+            <p style="font-size: 1.1rem;">No patients assigned yet</p>
+        </div>
+    </div>
+</div>
+
+<!-- Patient Detail Modal -->
+<div id="patientModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; padding: 2rem;">
+    <div style="background: white; max-width: 600px; max-height: 90vh; overflow-y: auto; margin: auto; padding: 2rem; border-radius: 8px; margin-top: 5vh;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 id="modalTitle" style="color: #667eea;"></h2>
+            <button onclick="closePatientModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">✕</button>
+        </div>
+        <div id="modalContent" style="color: #333;"></div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = '/api/appointments';
+
+    document.addEventListener('DOMContentLoaded', loadPatients);
+
+    async function loadPatients() {
+        try {
+            const response = await fetch(`${API_BASE}/doctor/patients/`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch patients');
+            }
+            
+            const patients = await response.json();
+            displayPatients(patients);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error loading patients. Please try again.');
+            document.getElementById('loading').innerHTML = '<p style="color: #e74c3c; font-weight: bold;">Error loading patients</p>';
+        }
+    }
+
+    function displayPatients(patients) {
+        const loading = document.getElementById('loading');
+        const patientsList = document.getElementById('patientsList');
+        const patientsContainer = document.getElementById('patientsContainer');
+        const noPatients = document.getElementById('noPatients');
+        
+        loading.style.display = 'none';
+        patientsList.style.display = 'block';
+        
+        if (patients.length === 0) {
+            noPatients.style.display = 'block';
+            patientsContainer.style.display = 'none';
+        } else {
+            noPatients.style.display = 'none';
+            patientsContainer.innerHTML = patients.map(patient => `
+                <div style="background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #667eea;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                        <div>
+                            <h3 style="color: #333; margin-bottom: 0.25rem;">
+                                ${patient.patient_name}
+                            </h3>
+                            <p style="color: #999; font-size: 0.9rem;">${patient.patient_email}</p>
+                        </div>
+                        <span style="background: ${getStatusColor(patient.status)}; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: bold;">
+                            ${patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}
+                        </span>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem;">
+                        <p style="margin-bottom: 0.5rem;"><strong>🏥 Disease/Condition:</strong> ${patient.disease || 'Not specified'}</p>
+                        <p style="margin-bottom: 0.5rem;"><strong>📅 Appointment:</strong> ${formatDate(patient.appointment_date)}</p>
+                        <p style="margin-bottom: 0.5rem;"><strong>🩺 Current Health:</strong> ${patient.current_conditions || 'Not provided'}</p>
+                    </div>
+                    
+                    ${patient.notes ? `<p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem; font-style: italic;"><strong>Notes:</strong> ${patient.notes}</p>` : ''}
+                    
+                    <button onclick="viewPatientDetails('${patient.patient_name}', ${JSON.stringify(patient).replace(/'/g, '&#39;')})" style="width: 100%; padding: 0.75rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                        View Full Details
+                    </button>
+                </div>
+            `).join('');
+        }
+    }
+
+    function viewPatientDetails(name, patient) {
+        const modal = document.getElementById('patientModal');
+        const title = document.getElementById('modalTitle');
+        const content = document.getElementById('modalContent');
+        
+        title.textContent = name;
+        
+        content.innerHTML = `
+            <div style="line-height: 1.8;">
+                <h4 style="color: #667eea; margin: 1rem 0 0.5rem 0;">Personal Information</h4>
+                <p><strong>Email:</strong> ${patient.patient_email}</p>
+                <p><strong>Disease/Condition:</strong> ${patient.disease}</p>
+                <p><strong>Appointment Status:</strong> ${patient.status.charAt(0).toUpperCase() + patient.status.slice(1)}</p>
+                <p><strong>Appointment Date:</strong> ${formatDate(patient.appointment_date)}</p>
+                
+                <h4 style="color: #667eea; margin: 1rem 0 0.5rem 0;">Medical History</h4>
+                <p><strong>Current Conditions:</strong></p>
+                <p style="background: #f8f9fa; padding: 0.75rem; border-radius: 4px; border-left: 3px solid #667eea;">
+                    ${patient.current_conditions || 'Not provided'}
+                </p>
+                
+                <p style="margin-top: 1rem;"><strong>Medical History:</strong></p>
+                <p style="background: #f8f9fa; padding: 0.75rem; border-radius: 4px; border-left: 3px solid #667eea;">
+                    ${patient.medical_history || 'Not provided'}
+                </p>
+                
+                <p style="margin-top: 1rem;"><strong>Allergies:</strong></p>
+                <p style="background: #f8f9fa; padding: 0.75rem; border-radius: 4px; border-left: 3px solid #764ba2;">
+                    ${patient.allergies || 'No known allergies'}
+                </p>
+                
+                <h4 style="color: #667eea; margin: 1rem 0 0.5rem 0;">Consultation Notes</h4>
+                <p style="background: #f8f9fa; padding: 0.75rem; border-radius: 4px; whitespace: pre-wrap;">
+                    ${patient.notes || 'No notes available'}
+                </p>
+            </div>
+        `;
+        
+        modal.style.display = 'flex';
+    }
+
+    function closePatientModal() {
+        document.getElementById('patientModal').style.display = 'none';
+    }
+
+    function getStatusColor(status) {
+        const colors = {
+            'scheduled': '#3498db',
+            'completed': '#27ae60',
+            'cancelled': '#e74c3c',
+            'no_show': '#95a5a6'
+        };
+        return colors[status] || '#667eea';
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function getCsrfToken() {
+        // Get CSRF token from cookie or meta tag
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue || document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('patientModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closePatientModal();
+        }
+    });
+</script>
+
+<style>
+    .container {
+        max-width: 1200px;
+    }
+</style>
+{% endblock %}

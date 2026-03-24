@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Telemedicine Platform{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .register-container {
+            max-width: 600px;
+            margin: 3rem auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .register-container h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .register-container > p {
+            text-align: center;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group.checkbox {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group.checkbox input {
+            width: auto;
+            margin-top: 0.3rem;
+            margin-right: 0.5rem;
+            cursor: pointer;
+        }
+
+        .form-group.checkbox label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .form-group.checkbox label a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .form-group.checkbox label a:hover {
+            text-decoration: underline;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-actions button,
+        .form-actions a {
+            flex: 1;
+            text-align: center;
+        }
+
+        .login-link {
+            text-align: center;
+        }
+
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        .errors {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #f5c6cb;
+        }
+
+        .errors ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .field-error {
+            color: #721c24;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        .role-selection {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .role-option {
+            position: relative;
+        }
+
+        .role-option input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .role-option label {
+            display: block;
+            padding: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0;
+        }
+
+        .role-option input:checked + label {
+            border-color: #667eea;
+            background-color: rgba(102, 126, 234, 0.05);
+        }
+
+        @media (max-width: 600px) {
+            .register-container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .role-selection {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="register-container">
+        <h1>Create Your Account</h1>
+        <p>Join our telemedicine platform to access healthcare services</p>
+
+        {% if form.non_field_errors %}
+            <div class="errors">
+                <ul>
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="first_name">First Name *</label>
+                    <input 
+                        type="text" 
+                        id="first_name" 
+                        name="first_name" 
+                        placeholder="John"
+                        required
+                        autofocus
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="last_name">Last Name *</label>
+                    <input 
+                        type="text" 
+                        id="last_name" 
+                        name="last_name" 
+                        placeholder="Doe"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="you@example.com"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>I am a:</label>
+                <div class="role-selection">
+                    <div class="role-option">
+                        <input 
+                            type="radio" 
+                            id="patient" 
+                            name="role" 
+                            value="patient"
+                            required
+                            checked
+                        >
+                        <label for="patient">👤 Patient</label>
+                    </div>
+                    <div class="role-option">
+                        <input 
+                            type="radio" 
+                            id="doctor" 
+                            name="role" 
+                            value="doctor"
+                            required
+                        >
+                        <label for="doctor">👨‍⚕️ Doctor</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">Password *</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password"
+                        placeholder="Create a strong password"
+                        required
+                    >
+                    <small style="color: #666;">At least 8 characters with uppercase, lowercase, and numbers</small>
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password *</label>
+                    <input 
+                        type="password" 
+                        id="confirm_password" 
+                        name="confirm_password"
+                        placeholder="Confirm your password"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div class="form-group checkbox">
+                <input 
+                    type="checkbox" 
+                    id="terms" 
+                    name="terms" 
+                    required
+                >
+                <label for="terms">
+                    I agree to the <a href="/terms/">Terms of Service</a> and <a href="/privacy/">Privacy Policy</a> *
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn">Create Account</button>
+                <a href="/" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+
+        <div class="login-link">
+            Already have an account? <a href="/login/">Sign in here</a>
+        </div>
+    </div>
+{% endblock %}

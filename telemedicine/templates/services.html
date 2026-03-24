@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Services - Telemedicine Platform{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .services-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 3rem;
+        }
+
+        .services-hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .service-category {
+            margin: 3rem 0;
+        }
+
+        .service-category h2 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .service-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        .service-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .service-card h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .service-description {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .service-features {
+            color: #999;
+            font-size: 0.85rem;
+            list-style-position: inside;
+        }
+
+        .service-features li {
+            margin-bottom: 0.3rem;
+        }
+
+        .pricing-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-top: 2rem;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .pricing-card {
+            border: 2px solid #eee;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .pricing-card h3 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .price {
+            font-size: 2rem;
+            color: #667eea;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        .price-period {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        .featured {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .featured .featured-badge {
+            background-color: #667eea;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .services-hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .service-category h2 {
+                font-size: 1.5rem;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="services-hero">
+        <h1>Our Services</h1>
+        <p>Comprehensive healthcare solutions at your fingertips</p>
+    </div>
+
+    <div class="service-category">
+        <h2>Consultation Services</h2>
+        <div class="services-grid">
+            <div class="service-card">
+                <div class="service-icon">👨‍⚕️</div>
+                <h3>General Practitioners</h3>
+                <div class="service-description">
+                    Consult with board-certified general practitioners for routine check-ups, common illnesses, and health advice.
+                </div>
+                <ul class="service-features">
+                    <li>✓ Same-day appointments</li>
+                    <li>✓ Digital prescriptions</li>
+                    <li>✓ Follow-up consultations</li>
+                </ul>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🧬</div>
+                <h3>Specialists</h3>
+                <div class="service-description">
+                    Access to board-certified specialists including cardiologists, dermatologists, and more for specialized care.
+                </div>
+                <ul class="service-features">
+                    <li>✓ Expert consultations</li>
+                    <li>✓ Specialist recommendations</li>
+                    <li>✓ Extended consultation time</li>
+                </ul>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🏥</div>
+                <h3>Mental Health</h3>
+                <div class="service-description">
+                    Connect with licensed psychologists and counselors for mental health support and therapy sessions.
+                </div>
+                <ul class="service-features">
+                    <li>✓ Confidential sessions</li>
+                    <li>✓ Therapy plans</li>
+                    <li>✓ Crisis support</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="service-category">
+        <h2>Additional Services</h2>
+        <div class="services-grid">
+            <div class="service-card">
+                <div class="service-icon">📋</div>
+                <h3>Medical Records</h3>
+                <div class="service-description">
+                    Secure storage and management of your medical records for easy access and sharing with healthcare providers.
+                </div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">💊</div>
+                <h3>Prescription Management</h3>
+                <div class="service-description">
+                    Digital prescriptions delivered directly to your pharmacy with automatic refill options available.
+                </div>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🩺</div>
+                <h3>Lab Integration</h3>
+                <div class="service-description">
+                    Order lab tests online and receive results through our secure platform with doctor interpretations.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pricing-section">
+        <h2>Pricing Plans</h2>
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <h3>Basic</h3>
+                <div class="price">$25<span class="price-period">/consultation</span></div>
+                <ul style="text-align: left; color: #666; margin: 1.5rem 0;">
+                    <li>✓ General practitioner consultations</li>
+                    <li>✓ Digital prescriptions</li>
+                    <li>✓ Medical records</li>
+                    <li>✓ Email support</li>
+                </ul>
+                <a href="/register/" class="btn">Get Started</a>
+            </div>
+            <div class="pricing-card featured">
+                <div class="featured-badge">POPULAR</div>
+                <h3>Professional</h3>
+                <div class="price">$40<span class="price-period">/consultation</span></div>
+                <ul style="text-align: left; color: #666; margin: 1.5rem 0;">
+                    <li>✓ All Basic features</li>
+                    <li>✓ Specialist consultations</li>
+                    <li>✓ Priority scheduling</li>
+                    <li>✓ 24/7 chat support</li>
+                    <li>✓ Lab integration</li>
+                </ul>
+                <a href="/register/" class="btn">Choose Plan</a>
+            </div>
+            <div class="pricing-card">
+                <h3>Premium</h3>
+                <div class="price">$99<span class="price-period">/month</span></div>
+                <ul style="text-align: left; color: #666; margin: 1.5rem 0;">
+                    <li>✓ Unlimited consultations</li>
+                    <li>✓ All specialists</li>
+                    <li>✓ Dedicated health coach</li>
+                    <li>✓ Priority phone support</li>
+                    <li>✓ Annual health checkup</li>
+                </ul>
+                <a href="/register/" class="btn">Try Premium</a>
+            </div>
+        </div>
+    </div>
+
+    <div style="background: #f0f4ff; padding: 2rem; border-radius: 8px; margin-top: 3rem; text-align: center;">
+        <h3 style="color: #667eea; margin-bottom: 1rem;">Have Questions?</h3>
+        <p style="color: #666; margin-bottom: 1.5rem;">
+            Our support team is available 24/7 to answer any questions about our services.
+        </p>
+        <a href="/contact/" class="btn">Contact Us</a>
+    </div>
+{% endblock %}
