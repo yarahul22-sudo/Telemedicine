@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - Telemedicine Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            text-decoration: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo:hover {
+            opacity: 0.9;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: opacity 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            opacity: 0.8;
+        }
+
+        .nav-links .btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1.5rem;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .nav-links .btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        main {
+            min-height: calc(100vh - 200px);
+            padding: 2rem 0;
+        }
+
+        footer {
+            background-color: #2c3e50;
+            color: white;
+            padding: 3rem 0 1rem;
+            margin-top: 3rem;
+        }
+
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h4 {
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+
+        .footer-section a {
+            color: #bdc3c7;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-section a:hover {
+            color: #667eea;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #34495e;
+            padding-top: 1.5rem;
+            text-align: center;
+            color: #95a5a6;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background-color: #764ba2;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .alert {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #28a745;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-color: #bee5eb;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                gap: 1rem;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            main {
+                min-height: auto;
+            }
+        }
+
+        
+    <style>
+        .booking-page {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .booking-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .booking-header h1 {
+            color: #667eea;
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .booking-content {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .doctor-info-box {
+            flex: 0 0 280px;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 2px solid #f0f0f0;
+        }
+
+        .doctor-info-box h2 {
+            color: #667eea;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            text-align: center;
+        }
+
+        .doctor-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            text-align: center;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .doctor-specialty {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            color: #666;
+            font-size: 0.95rem;
+            margin-top: 0.25rem;
+        }
+
+        .booking-form-box {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 2px solid #f0f0f0;
+        }
+
+        .booking-form-box h2 {
+            color: #667eea;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .required {
+            color: #dc3545;
+        }
+
+        .form-note {
+            font-size: 0.85rem;
+            color: #999;
+            margin-top: 0.3rem;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-secondary {
+            background: #ddd;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .btn-secondary:hover {
+            background: #ccc;
+        }
+
+        .message-box {
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .message-box.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .message-box.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .loading-spinner.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 800px) {
+            .booking-content {
+                flex-direction: column;
+            }
+
+            .doctor-info-box {
+                flex: 1 1 auto;
+            }
+        }
+    </style>
+
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="/" class="logo">
+                <span>🏥</span>
+                <span>Telemedicine</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/about/">About</a></li>
+                <li><a href="/services/">Services</a></li>
+                
+                    <li><a href="/dashboard/">Dashboard</a></li>
+                    <li><a href="/logout/" class="btn">Logout</a></li>
+                
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            
+
+            
+<div class="booking-page">
+    <!-- Header -->
+    <div class="booking-header">
+        <h1>📅 Book Your Appointment</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div class="booking-content">
+        
+        <!-- Doctor Information Card -->
+        <div class="doctor-info-box">
+            <h2>👨‍⚕️ Doctor</h2>
+            
+            <div class="doctor-name">Dr. Ramlal Doctor</div>
+            <div class="doctor-specialty">Psychiatry</div>
+
+            <div class="info-item">
+                <div class="info-label">License</div>
+                <div class="info-value">8000</div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">Experience</div>
+                <div class="info-value">4 years</div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">Rating</div>
+                <div class="info-value">⭐ 5.0/5.0</div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">Consultation Fee</div>
+                <div class="info-value">$0.00</div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">Available Days</div>
+                <div class="info-value">Wednesday,Thursday,Friday,Saturday</div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">Qualification</div>
+                <div class="info-value">MD</div>
+            </div>
+
+            
+        </div>
+
+        <!-- Booking Form Card -->
+        <div class="booking-form-box">
+            <h2>Book Appointment</h2>
+
+            <!-- Message Container -->
+            <div id="message-container"></div>
+
+            <!-- Booking Form -->
+            <form id="bookingForm">
+                <input type="hidden" name="csrfmiddlewaretoken" value="IKyZ2CnFIYMnW91uC7v79S3r7aGB8eS6Ob73r6NDtPNBI3qjNOvqptFKbJnohJMq">
+
+                <div class="form-group">
+                    <label for="appointment_date">📅 Appointment Date & Time <span class="required">*</span></label>
+                    <input 
+                        type="datetime-local" 
+                        id="appointment_date" 
+                        name="appointment_date" 
+                        required
+                    >
+                    <div class="form-note">Select a date and time within the doctor's available hours</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="disease_id">🏥 Disease/Condition</label>
+                    <select id="disease_id" name="disease_id">
+                        <option value="">-- Select or leave blank --</option>
+                        
+                            <option value="5">Acne</option>
+                        
+                            <option value="11">Anxiety Disorder</option>
+                        
+                            <option value="9">Back Pain</option>
+                        
+                            <option value="13">Childhood Illness</option>
+                        
+                            <option value="14">Cold and Flu</option>
+                        
+                            <option value="15">Cough</option>
+                        
+                            <option value="12">Depression</option>
+                        
+                            <option value="3">Diabetes</option>
+                        
+                            <option value="7">Headache</option>
+                        
+                            <option value="1">Heart Disease</option>
+                        
+                            <option value="2">Hypertension</option>
+                        
+                            <option value="10">Joint Pain</option>
+                        
+                            <option value="8">Migraine</option>
+                        
+                            <option value="6">Psoriasis</option>
+                        
+                            <option value="4">Skin Disease</option>
+                        
+                    </select>
+                    <div class="form-note">Select the primary condition for this consultation</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="consultation_type">💬 Consultation Type <span class="required">*</span></label>
+                    <select id="consultation_type" name="consultation_type" required>
+                        <option value="">-- Select Type --</option>
+                        <option value="video">Video Call</option>
+                        <option value="audio">Audio Call</option>
+                        <option value="in_person">In Person</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">📝 Symptoms/Medical Notes <span class="required">*</span></label>
+                    <textarea 
+                        id="notes" 
+                        name="notes" 
+                        placeholder="Describe your symptoms, medical concerns, or any additional information..."
+                        required
+                    ></textarea>
+                    <div class="form-note">This helps the doctor prepare for your appointment</div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">✓ Book Appointment</button>
+                    <a href="/find-doctor/" class="btn btn-secondary">← Back</a>
+                </div>
+            </form>
+
+            <!-- Loading Indicator -->
+            <div id="loading" class="loading-spinner">
+                <span class="spinner"></span>
+                <span>Booking appointment...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Set minimum date to tomorrow
+    const dateInput = document.getElementById('appointment_date');
+    const today = new Date();
+    today.setDate(today.getDate() + 1);
+    const minDate = today.toISOString().slice(0, 16);
+    dateInput.min = minDate;
+
+    // Form submission
+    document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const appointment_date = document.getElementById('appointment_date').value;
+        const disease_id = document.getElementById('disease_id').value || null;
+        const notes = document.getElementById('notes').value;
+        const consultation_type = document.getElementById('consultation_type').value;
+
+        // Validate
+        if (!appointment_date || !consultation_type || !notes) {
+            showMessage('Please fill in all required fields.', 'error');
+            return;
+        }
+
+        // Show loading
+        document.getElementById('loading').classList.add('show');
+        document.getElementById('bookingForm').style.opacity = '0.6';
+        document.getElementById('bookingForm').style.pointerEvents = 'none';
+
+        try {
+            const isoDate = new Date(appointment_date + ':00').toISOString();
+            
+            const payload = {
+                doctor_id: 7,
+                appointment_date: isoDate,
+                disease_id: disease_id ? parseInt(disease_id) : null,
+                notes: notes,
+                consultation_type: consultation_type,
+            };
+
+            const response = await fetch('/api/appointments/appointments/book/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage('✓ Appointment booked successfully! Redirecting to dashboard...', 'success');
+                document.getElementById('bookingForm').reset();
+                
+                setTimeout(() => {
+                    window.location.href = '/dashboard/';
+                }, 2000);
+            } else {
+                showMessage('Error: ' + (data.error || 'Failed to book appointment'), 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showMessage('Error: ' + error.message, 'error');
+        } finally {
+            document.getElementById('loading').classList.remove('show');
+            document.getElementById('bookingForm').style.opacity = '1';
+            document.getElementById('bookingForm').style.pointerEvents = 'auto';
+        }
+    });
+
+    function showMessage(text, type) {
+        const container = document.getElementById('message-container');
+        const msgBox = document.createElement('div');
+        msgBox.className = `message-box ${type}`;
+        msgBox.textContent = text;
+        container.innerHTML = '';
+        container.appendChild(msgBox);
+        msgBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function getCsrfToken() {
+        let csrftoken = null;
+        const name = 'csrftoken';
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    csrftoken = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        if (!csrftoken) {
+            csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        }
+        return csrftoken;
+    }
+</script>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>About</h4>
+                    <p>Providing accessible healthcare through modern telemedicine technology.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <a href="/">Home</a>
+                    <a href="/about/">About Us</a>
+                    <a href="/services/">Services</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <a href="/contact/">Contact Us</a>
+                    <a href="/faq/">FAQ</a>
+                    <a href="/privacy/">Privacy Policy</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact</h4>
+                    <p>Email: info@telemedicine.com</p>
+                    <p>Phone: 1-800-TELEHEALTH</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Telemedicine Platform. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
