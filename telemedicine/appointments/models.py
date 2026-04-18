@@ -88,3 +88,62 @@ class Appointment(models.Model):
     
     def __str__(self):
         return f"Appointment: {self.patient.user.get_full_name()} with Dr. {self.doctor.user.get_full_name()}"
+
+
+class Prescription(models.Model):
+    """Model for doctor prescriptions"""
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    appointment = models.ForeignKey(
+        Appointment,
+        on_delete=models.CASCADE,
+        related_name='prescriptions'
+    )
+    doctor = models.ForeignKey(
+        DoctorProfile,
+        on_delete=models.CASCADE,
+        related_name='prescriptions'
+    )
+    patient = models.ForeignKey(
+        PatientProfile,
+        on_delete=models.CASCADE,
+        related_name='prescriptions'
+    )
+    medication_name = models.CharField(max_length=200, help_text="Name of the medication")
+    dosage = models.CharField(max_length=100, help_text="e.g., 500mg twice daily")
+    frequency = models.CharField(
+        max_length=100,
+        help_text="e.g., Twice daily, Before meals"
+    )
+    duration_days = models.IntegerField(
+        default=7,
+        help_text="Duration in days"
+    )
+    instructions = models.TextField(
+        blank=True,
+        help_text="Additional instructions like avoid with food"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active'
+    )
+    issued_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Prescription"
+        verbose_name_plural = "Prescriptions"
+        ordering = ['-issued_at']
+        indexes = [
+            models.Index(fields=['patient', 'status']),
+            models.Index(fields=['doctor']),
+        ]
+    
+    def __str__(self):
+        return f"Rx: {self.medication_name} for {self.patient.user.get_full_name()}"
