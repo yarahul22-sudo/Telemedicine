@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+
+{% block title %}Doctor Profile - Admin{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .detail-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .detail-header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .profile-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .profile-card h2 {
+            color: #667eea;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.75rem;
+        }
+
+        .profile-item {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .profile-item:last-child {
+            border-bottom: none;
+        }
+
+        .profile-label {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .profile-value {
+            color: #333;
+            word-break: break-word;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .approved-badge {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .pending-badge {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-completed {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .status-cancelled {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .status-pending {
+            color: #ffc107;
+            font-weight: bold;
+        }
+
+        .approval-section {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+
+        .patients-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .section-header h2 {
+            margin: 0;
+            color: #333;
+        }
+
+        .stats-mini {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-mini {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 5px;
+            text-align: center;
+            border-left: 3px solid #667eea;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .patient-list {
+            display: grid;
+            gap: 0;
+        }
+
+        .patient-card {
+            padding: 1.5rem;
+            border-bottom: 1px solid #dee2e6;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .patient-card:last-child {
+            border-bottom: none;
+        }
+
+        .patient-header {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.75rem;
+        }
+
+        .patient-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .info-block {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+
+        .diseases-container {
+            background: #f0f4ff;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 0.75rem;
+        }
+
+        .diseases-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .disease-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .disease-badge {
+            background: #667eea;
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+        }
+
+        @media (max-width: 900px) {
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .patient-info {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .patient-card {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <a href="{% url 'admin_doctors_list' %}" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Doctors List</a>
+
+    <div class="detail-header">
+        <h1><i class="fa-solid fa-user-doctor"></i> Dr. {{ doctor.full_name }}</h1>
+        <p>{{ doctor.specialization|title }} • License: {{ doctor.license_number }}</p>
+        
+        {% if not doctor.is_approved %}
+        <div class="approval-section" style="margin-top: 1.5rem; background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px;">
+            <p style="margin-bottom: 1rem; font-weight: 600;"><i class="fa-solid fa-triangle-exclamation"></i> This doctor is pending approval.</p>
+            <form action="{% url 'approve_doctor' doctor.id %}" method="POST" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-small btn-approve" style="border: none; padding: 0.8rem 2rem; font-size: 1rem;">
+                    <i class="fa-solid fa-check"></i> Approve Doctor Profile
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Doctor Profile Info -->
+    <div class="profile-grid">
+        <!-- Basic Information -->
+        <div class="profile-card">
+            <h2><i class="fa-solid fa-clipboard-list"></i> Basic Information</h2>
+            
+            <div class="profile-item">
+                <div class="profile-label">Full Name:</div>
+                <div class="profile-value">{{ doctor.full_name }}</div>
+            </div>
+
+            <div class="profile-item">
+                <div class="profile-label">Email:</div>
+                <div class="profile-value">{{ doctor.email }}</div>
+            </div>
+
+            <div class="profile-item">
+                <div class="profile-label">UID (Firebase):</div>
+                <div class="profile-value"><code>{{ doctor.id }}</code></div>
+            </div>
+
+            <div class="profile-item">
+                <div class="profile-label">Status:</div>
+                <div class="profile-value">
+                    <span class="status-badge {% if doctor.is_approved %}approved-badge{% else %}pending-badge{% endif %}">
+                        {% if doctor.is_approved %}<i class="fa-solid fa-check"></i> Approved{% else %}<i class="fa-solid fa-hourglass-half"></i> Pending{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Professional Information -->
+        <div class="profile-card">
+            <h2><i class="fa-solid fa-hospital"></i> Professional Info</h2>
+            
+            <div class="profile-item">
+                <div class="profile-label">Specialization:</div>
+                <div class="profile-value">{{ doctor.specialization|title }}</div>
+            </div>
+
+            <div class="profile-item">
+                <div class="profile-label">License #:</div>
+                <div class="profile-value">{{ doctor.license_number }}</div>
+            </div>
+
+            <div class="profile-item">
+                <div class="profile-label">Qualification:</div>
+                <div class="profile-value">{{ doctor.qualification|default:"Not provided" }}</div>
+            </div>
+
+            <div class="profile-item">
+                <div class="profile-label">Experience:</div>
+                <div class="profile-value">{{ doctor.experience_years }} years</div>
+            </div>
+
+            <div class="profile-item">
+                <div class="profile-label">Available Days:</div>
+                <div class="profile-value">{{ doctor.available_days }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Appointments Section -->
+    <div class="patients-section">
+        <div class="section-header">
+            <h2><i class="fa-solid fa-calendar-days"></i> Appointments History ({{ total_appointments }})</h2>
+        </div>
+
+        {% if appointments %}
+            <div class="patient-list">
+                {% for app in appointments %}
+                    <div class="patient-card">
+                        <div>
+                            <div class="patient-header">Appointment with: {{ app.patient_name }}</div>
+                            <div class="patient-info">
+                                <div class="info-block">
+                                    <span class="info-label">Date:</span>
+                                    <span>{{ app.appointment_date }}</span>
+                                </div>
+                                <div class="info-block">
+                                    <span class="info-label">Status:</span>
+                                    <span class="{% if app.status == 'completed' %}status-completed{% elif app.status == 'cancelled' %}status-cancelled{% else %}status-pending{% endif %}">
+                                        {{ app.status|upper }}
+                                    </span>
+                                </div>
+                                <div class="info-block">
+                                    <span class="info-label">Consultation:</span>
+                                    <span>{{ app.consultation_type|title }}</span>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.9rem; color: #666;">
+                                <strong>Notes:</strong> {{ app.notes|default:"No notes provided." }}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No appointments found for this doctor in Firestore.</p>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
