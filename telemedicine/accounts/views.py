@@ -3,12 +3,14 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from users.models.base import CustomUser
 from users.models.patient import PatientProfile
 from users.models.doctor import DoctorProfile
 from appointments.models import Appointment, Prescription
+import firebase_admin.auth
 
 
 def home(request):
@@ -26,183 +28,159 @@ def register_view(request):
         return redirect('home')
     
     if request.method == 'POST':
-        first_name = request.POST.get('first_name', '').strip()
-        last_name = request.POST.get('last_name', '').strip()
-        email = request.POST.get('email', '').strip()
-        role = request.POST.get('role', 'patient')
-        password = request.POST.get('password', '')
-        confirm_password = request.POST.get('confirm_password', '')
-        terms = request.POST.get('terms')
-
-        # Validation
-        errors = []
-        
-        if not all([first_name, last_name, email, password, confirm_password]):
-            errors.append('All fields are required.')
-        
-        if password != confirm_password:
-            errors.append('Passwords do not match.')
-        
-        if len(password) < 8:
-            errors.append('Password must be at least 8 characters long.')
-        
-        if CustomUser.objects.filter(email=email).exists():
-            errors.append('Email already registered. Please use a different email or login.')
-        
-        if not terms:
-            errors.append('You must agree to the Terms of Service and Privacy Policy.')
-        
-        if role not in ['patient', 'doctor']:
-            errors.append('Invalid role selected.')
-        
-        # Doctor-specific validation
-        if role == 'doctor':
-            specialization = request.POST.get('specialization', '').strip()
-            license_number = request.POST.get('license_number', '').strip()
-            experience_years = request.POST.get('experience_years', '0')
-            available_days = request.POST.getlist('available_days')
-            qualification = request.POST.get('qualification', '').strip()
-            
-            if not specialization:
-                errors.append('Specialization is required for doctors.')
-            
-            if not license_number:
-                errors.append('Medical license number is required.')
-            
-            if not experience_years:
-                errors.append('Years of experience is required.')
-            
-            if not available_days:
-                errors.append('You must select at least one available day.')
-            
-            try:
-                experience_years = int(experience_years)
-                if experience_years < 0 or experience_years > 60:
-                    errors.append('Years of experience must be between 0 and 60.')
-            except ValueError:
-                errors.append('Years of experience must be a valid number.')
-            
-            # Check if license already exists
-            if DoctorProfile.objects.filter(license_number=license_number).exists():
-                errors.append('This medical license number is already registered.')
-        
-        if errors:
-            for error in errors:
-                messages.error(request, error)
-            return render(request, 'register.html', {
-                'form': request.POST,
-                'title': 'Register',
-                'role': role
-            })
+        import json
+        import firebase_admin.auth
+        from django.http import JsonResponse
         
         try:
-            # Generate username from email
-            username = email.split('@')[0]
+            data = json.loads(request.body)
+            token = data.get('token')
             
-            # Check if username already exists
-            counter = 1
-            original_username = username
-            while CustomUser.objects.filter(username=username).exists():
-                username = f"{original_username}{counter}"
-                counter += 1
+            if not token:
+                return JsonResponse({'error': 'No authentication token provided'}, status=400)
+                
+            # Verify Firebase token
+            decoded_token = firebase_admin.auth.verify_id_token(token)
+            uid = decoded_token['uid']
+            email = decoded_token.get('email')
             
-            # Create user
-            user = CustomUser.objects.create_user(
-                username=username,
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                password=password,
-                role=role
-            )
+            if not email:
+                return JsonResponse({'error': 'Invalid token: No email found'}, status=400)
+
+            first_name = data.get('first_name', '').strip()
+            last_name = data.get('last_name', '').strip()
+            role = data.get('role', 'patient')
             
-            # Create role-specific profile
-            if role == 'patient':
-                PatientProfile.objects.create(user=user)
-                messages.success(request, 'Account created successfully! Please log in.')
-            elif role == 'doctor':
-                available_days_str = ','.join(available_days) if available_days else 'Monday,Tuesday,Wednesday,Thursday,Friday'
-                DoctorProfile.objects.create(
-                    user=user,
-                    specialization=specialization,
-                    license_number=license_number,
-                    experience_years=experience_years,
-                    available_days=available_days_str,
-                    qualification=qualification,
-                    is_approved=False  # Require admin approval
-                )
-                messages.success(request, '✓ Doctor account created! Please log in. Your account is pending admin approval.')
+            # Validation
+            if not all([first_name, last_name, email]):
+                return JsonResponse({'error': 'All fields are required.'}, status=400)
             
-            return redirect('login')
-        
+            from telemedicine.firestore_db import db
+            from firebase_admin import firestore
+            users_ref = db.collection('users')
+            
+            # Check if user exists in Firestore
+            doc = users_ref.document(uid).get()
+            if doc.exists:
+                return JsonResponse({'error': 'Email already registered. Please login instead.'}, status=400)
+            
+            user_data = {
+                'uid': uid,
+                'email': email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'role': role,
+                'profile_image_url': data.get('profile_image_url', '').strip(),
+                'created_at': firestore.SERVER_TIMESTAMP,
+            }
+            
+            if role == 'doctor':
+                user_data['specialization'] = data.get('specialization', '').strip().lower()
+                user_data['license_number'] = data.get('license_number', '').strip()
+                user_data['experience_years'] = int(data.get('experience_years', '0'))
+                user_data['available_days'] = data.get('available_days', [])
+                user_data['qualification'] = data.get('qualification', '').strip()
+                user_data['is_approved'] = False
+            
+            # Save user to Firestore
+            users_ref.document(uid).set(user_data)
+            
+            return JsonResponse({'success': True, 'redirect': '/login/'})
+            
         except Exception as e:
             import traceback
             traceback.print_exc()
-            messages.error(request, f'An error occurred during registration: {str(e)}')
-            return render(request, 'register.html', {
-                'form': request.POST,
-                'title': 'Register',
-                'role': role
-            })
+            return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
     
-    return render(request, 'register.html', {'title': 'Register'})
+    from django.conf import settings
+    context = {
+        'title': 'Register',
+        'FIREBASE_API_KEY': settings.FIREBASE_API_KEY,
+        'FIREBASE_AUTH_DOMAIN': settings.FIREBASE_AUTH_DOMAIN,
+        'FIREBASE_PROJECT_ID': settings.FIREBASE_PROJECT_ID,
+        'FIREBASE_STORAGE_BUCKET': settings.FIREBASE_STORAGE_BUCKET,
+        'FIREBASE_MESSAGING_SENDER_ID': settings.FIREBASE_MESSAGING_SENDER_ID,
+        'FIREBASE_APP_ID': settings.FIREBASE_APP_ID,
+    }
+    return render(request, 'register.html', context)
 
 
 @require_http_methods(["GET", "POST"])
 def login_view(request):
-    """User login view"""
+    """User login view via Firebase Token"""
     if request.user.is_authenticated:
         return redirect('home')
     
     if request.method == 'POST':
-        email = request.POST.get('email', '').strip()
-        password = request.POST.get('password', '')
-        
-        if not email or not password:
-            messages.error(request, 'Email and password are required.')
-            return render(request, 'login.html', {'title': 'Login'})
+        import json
+        import firebase_admin.auth
+        from django.http import JsonResponse
         
         try:
-            user = CustomUser.objects.get(email=email)
-            user = authenticate(request, username=user.username, password=password)
+            data = json.loads(request.body)
+            token = data.get('token')
             
-            if user is not None:
-                login(request, user)
+            if not token:
+                return JsonResponse({'error': 'No authentication token provided'}, status=400)
                 
-                # Check if doctor is approved
-                if user.role == 'doctor' and hasattr(user, 'doctor_profile'):
-                    if not user.doctor_profile.is_approved:
-                        messages.warning(request, '⏳ Your doctor account is pending admin approval. You will be able to accept appointments once approved.')
-                
-                messages.success(request, f'Welcome back, {user.first_name}!')
-                return redirect('home')
-            else:
-                messages.error(request, 'Invalid email or password.')
-        
-        except CustomUser.DoesNotExist:
-            messages.error(request, 'Invalid email or password.')
+            # Verify Firebase token
+            decoded_token = firebase_admin.auth.verify_id_token(token)
+            uid = decoded_token['uid']
+            email = decoded_token.get('email')
+            
+            if not email:
+                return JsonResponse({'error': 'Invalid token: No email found'}, status=400)
+
+            # Find user in Firestore via auth backend
+            user = authenticate(request, token=token)
+            if user is None:
+                return JsonResponse({'error': 'Account not found in local database. Please register.'}, status=404)
+            
+            # Force log the user in
+            login(request, user, backend='accounts.firestore_auth.FirestoreBackend')
+            
+            return JsonResponse({'success': True, 'redirect': '/dashboard/'})
+            
+        except firebase_admin.auth.InvalidIdTokenError:
+            return JsonResponse({'error': 'Invalid Firebase authentication token'}, status=401)
         except Exception as e:
-            messages.error(request, 'An error occurred during login. Please try again.')
-        
-        return render(request, 'login.html', {
-            'form': request.POST,
-            'title': 'Login'
-        })
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
     
-    return render(request, 'login.html', {'title': 'Login'})
+    from django.conf import settings
+    context = {
+        'title': 'Login',
+        'FIREBASE_API_KEY': settings.FIREBASE_API_KEY,
+        'FIREBASE_AUTH_DOMAIN': settings.FIREBASE_AUTH_DOMAIN,
+        'FIREBASE_PROJECT_ID': settings.FIREBASE_PROJECT_ID,
+        'FIREBASE_STORAGE_BUCKET': settings.FIREBASE_STORAGE_BUCKET,
+        'FIREBASE_MESSAGING_SENDER_ID': settings.FIREBASE_MESSAGING_SENDER_ID,
+        'FIREBASE_APP_ID': settings.FIREBASE_APP_ID,
+    }
+    return render(request, 'login.html', context)
 
 
 @login_required(login_url='login')
 def logout_view(request):
     """User logout view"""
+    reason = request.GET.get('reason')
     logout(request)
-    messages.success(request, 'You have been logged out successfully.')
+    if reason == 'timeout':
+        messages.warning(request, 'Your session has timed out due to 10 minutes of inactivity. Please login again.')
+    else:
+        messages.success(request, 'You have been logged out successfully.')
     return redirect('home')
 
 
 @login_required(login_url='login')
 def dashboard(request):
     """User dashboard view"""
+    if request.user.role == 'admin':
+        if request.user.email == 'admin@gmail.com':
+            return redirect('/djangoadmin/')
+        return redirect('/admin/')
+        
     context = {
         'title': 'Dashboard',
         'user': request.user,
@@ -213,60 +191,89 @@ def dashboard(request):
     }
     
     # Check if doctor and approved
-    if request.user.role == 'doctor' and hasattr(request.user, 'doctor_profile'):
-        context['is_doctor_approved'] = request.user.doctor_profile.is_approved
-    
-    # Get user's appointments and consultations
-    try:
-        if request.user.role == 'patient' and hasattr(request.user, 'patient_profile'):
-            patient = request.user.patient_profile
-            now = timezone.now()
-            
-            # Upcoming appointments (next 7 days, scheduled status)
-            upcoming = Appointment.objects.filter(
-                patient=patient,
-                appointment_date__gte=now,
-                appointment_date__lte=now + timedelta(days=7),
-                status='scheduled'
-            ).order_by('appointment_date')[:5]
-            context['upcoming_appointments'] = upcoming
-            
-            # Recent consultations (completed appointments)
-            recent = Appointment.objects.filter(
-                patient=patient,
-                status='completed'
-            ).order_by('-appointment_date')[:5]
-            context['recent_consultations'] = recent
-            
-            # Active prescriptions
-            active_prescriptions = Prescription.objects.filter(
-                patient=patient,
-                status='active'
-            ).order_by('-issued_at')[:5]
-            context['active_prescriptions'] = active_prescriptions
+    if request.user.role == 'doctor':
+        context['is_doctor_approved'] = request.user.data.get('is_approved', False)
         
-        elif request.user.role == 'doctor' and hasattr(request.user, 'doctor_profile'):
-            doctor = request.user.doctor_profile
-            now = timezone.now()
-            
-            # Doctor's upcoming appointments
-            upcoming = Appointment.objects.filter(
-                doctor=doctor,
-                appointment_date__gte=now,
-                appointment_date__lte=now + timedelta(days=7),
-                status='scheduled'
-            ).order_by('appointment_date')[:5]
-            context['upcoming_appointments'] = upcoming
-            
-            # Doctor's recent consultations
-            recent = Appointment.objects.filter(
-                doctor=doctor,
-                status='completed'
-            ).order_by('-appointment_date')[:5]
-            context['recent_consultations'] = recent
+    from telemedicine.firestore_db import db
+    from datetime import datetime, timedelta
     
+    try:
+        now = datetime.now()
+        appointments_ref = db.collection('appointments')
+        
+        if request.user.role == 'patient':
+            # Upcoming appointments
+            upcoming_query = appointments_ref.where('patient_id', '==', request.user.uid).where('status', '==', 'scheduled').stream()
+            upcoming = []
+            for doc in upcoming_query:
+                app_data = doc.to_dict()
+                app_data['id'] = doc.id
+                # Only keep future appointments
+                if app_data.get('appointment_date') and app_data['appointment_date'].timestamp() >= now.timestamp():
+                    upcoming.append(app_data)
+            
+            # Sort by date
+            upcoming.sort(key=lambda x: x.get('appointment_date', datetime.max.timestamp()))
+            context['upcoming_appointments'] = upcoming[:5]
+            
+            # Recent consultations
+            recent_query = appointments_ref.where('patient_id', '==', request.user.uid).where('status', '==', 'completed').stream()
+            recent = []
+            for doc in recent_query:
+                app_data = doc.to_dict()
+                app_data['id'] = doc.id
+                recent.append(app_data)
+                
+            recent.sort(key=lambda x: x.get('appointment_date', datetime.min.timestamp()), reverse=True)
+            context['recent_consultations'] = recent[:5]
+            
+            # Prescriptions
+            prescriptions_ref = db.collection('prescriptions')
+            active_rx_query = prescriptions_ref.where('patient_id', '==', request.user.uid).where('is_active', '==', True).stream()
+            active_rx = []
+            for doc in active_rx_query:
+                rx_data = doc.to_dict()
+                rx_data['id'] = doc.id
+                active_rx.append(rx_data)
+            context['active_prescriptions'] = active_rx
+            
+        elif request.user.role == 'doctor':
+            # Upcoming appointments
+            upcoming_query = appointments_ref.where('doctor_id', '==', request.user.uid).where('status', '==', 'scheduled').stream()
+            upcoming = []
+            for doc in upcoming_query:
+                app_data = doc.to_dict()
+                app_data['id'] = doc.id
+                if app_data.get('appointment_date') and app_data['appointment_date'].timestamp() >= now.timestamp():
+                    upcoming.append(app_data)
+                    
+            upcoming.sort(key=lambda x: x.get('appointment_date', datetime.max.timestamp()))
+            context['upcoming_appointments'] = upcoming[:5]
+            
+            # Recent consultations
+            recent_query = appointments_ref.where('doctor_id', '==', request.user.uid).where('status', '==', 'completed').stream()
+            recent = []
+            for doc in recent_query:
+                app_data = doc.to_dict()
+                app_data['id'] = doc.id
+                recent.append(app_data)
+                
+            recent.sort(key=lambda x: x.get('appointment_date', datetime.min.timestamp()), reverse=True)
+            context['recent_consultations'] = recent[:5]
+            
     except Exception as e:
-        print(f"Error loading dashboard data: {e}")
+        print(f"Error loading dashboard data from Firestore: {e}")
+    
+    # Add Firebase config to context for real-time updates
+    context.update({
+        'FIREBASE_API_KEY': settings.FIREBASE_API_KEY,
+        'FIREBASE_AUTH_DOMAIN': settings.FIREBASE_AUTH_DOMAIN,
+        'FIREBASE_PROJECT_ID': settings.FIREBASE_PROJECT_ID,
+        'FIREBASE_STORAGE_BUCKET': settings.FIREBASE_STORAGE_BUCKET,
+        'FIREBASE_MESSAGING_SENDER_ID': settings.FIREBASE_MESSAGING_SENDER_ID,
+        'FIREBASE_APP_ID': settings.FIREBASE_APP_ID,
+        'FIREBASE_CUSTOM_TOKEN': firebase_admin.auth.create_custom_token(request.user.uid).decode('utf-8'),
+    })
     
     return render(request, 'dashboard.html', context)
 
@@ -287,33 +294,64 @@ def find_doctor(request):
 
 @login_required(login_url='login')
 def book_appointment(request):
-    """Patient page to book appointment with a doctor"""
+    """Patient page to book appointment with a doctor using Firestore data"""
     if request.user.role != 'patient':
         messages.error(request, 'This page is only for patients.')
         return redirect('dashboard')
     
     doctor_id = request.GET.get('doctor_id')
-    
     if not doctor_id:
         messages.error(request, 'Doctor not specified.')
         return redirect('find_doctor')
     
+    from telemedicine.firestore_db import db
     try:
-        doctor = DoctorProfile.objects.select_related('user').get(id=doctor_id, is_approved=True)
-    except DoctorProfile.DoesNotExist:
-        messages.error(request, 'Doctor not found or not approved.')
+        # Fetch doctor from Firestore
+        doctor_doc = db.collection('users').document(str(doctor_id)).get()
+        if not doctor_doc.exists:
+            messages.error(request, 'Doctor not found.')
+            return redirect('find_doctor')
+            
+        doctor_data = doctor_doc.to_dict()
+        if doctor_data.get('role') != 'doctor' or not doctor_data.get('is_approved'):
+            messages.error(request, 'Doctor is not available or not approved.')
+            return redirect('find_doctor')
+            
+        doctor_data['id'] = doctor_doc.id
+        # Compatibility wrappers for template expectations
+        doctor_data['user'] = {
+            'get_full_name': f"{doctor_data.get('first_name', '')} {doctor_data.get('last_name', '')}"
+        }
+        doctor_data['get_specialization_display'] = doctor_data.get('specialization', 'General').title()
+        
+        # Fetch diseases (static for now, or from Firestore)
+        diseases = []
+        try:
+            from appointments.models import Disease
+            diseases = list(Disease.objects.all())
+        except Exception:
+            pass
+            
+        if not diseases:
+            diseases = [
+                {'id': '1', 'name': 'General Consultation'},
+                {'id': '2', 'name': 'Fever / Flu'},
+                {'id': '3', 'name': 'Headache / Migraine'},
+                {'id': '4', 'name': 'Stomach Pain'},
+                {'id': '5', 'name': 'Back Pain'},
+                {'id': '6', 'name': 'Skin Issue'},
+            ]
+            
+        context = {
+            'title': f"Book Appointment - Dr. {doctor_data['user']['get_full_name']}",
+            'doctor': doctor_data,
+            'diseases': diseases,
+            'user': request.user,
+        }
+        return render(request, 'book-appointment.html', context)
+    except Exception as e:
+        messages.error(request, f'Error loading doctor: {e}')
         return redirect('find_doctor')
-    
-    from appointments.models import Disease
-    diseases = Disease.objects.all()
-    
-    context = {
-        'title': f'Book Appointment - Dr. {doctor.user.get_full_name()}',
-        'doctor': doctor,
-        'diseases': diseases,
-        'user': request.user,
-    }
-    return render(request, 'book-appointment.html', context)
 
 
 @login_required(login_url='login')
@@ -331,6 +369,14 @@ def doctor_patients(request):
     context = {
         'title': 'My Patients',
         'user': request.user,
+        # Firebase Config
+        'FIREBASE_API_KEY': settings.FIREBASE_API_KEY,
+        'FIREBASE_AUTH_DOMAIN': settings.FIREBASE_AUTH_DOMAIN,
+        'FIREBASE_PROJECT_ID': settings.FIREBASE_PROJECT_ID,
+        'FIREBASE_STORAGE_BUCKET': settings.FIREBASE_STORAGE_BUCKET,
+        'FIREBASE_MESSAGING_SENDER_ID': settings.FIREBASE_MESSAGING_SENDER_ID,
+        'FIREBASE_APP_ID': settings.FIREBASE_APP_ID,
+        'FIREBASE_CUSTOM_TOKEN': firebase_admin.auth.create_custom_token(request.user.uid).decode('utf-8'),
     }
     return render(request, 'doctor-patients.html', context)
 
@@ -432,103 +478,221 @@ def change_role(request):
     return render(request, 'change-role.html', context)
 
 
+@login_required(login_url='login')
+def admin_dashboard(request):
+    """Unified Admin Dashboard for Firestore data management"""
+    if request.user.role != 'admin':
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('dashboard')
+        
+    from telemedicine.firestore_db import db
+    from firebase_admin import auth, firestore
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        try:
+            if action == 'add_user':
+                email = request.POST.get('email')
+                password = request.POST.get('password')
+                role = request.POST.get('role', 'patient')
+                first_name = request.POST.get('first_name', '')
+                last_name = request.POST.get('last_name', '')
+                
+                try:
+                    user = auth.create_user(email=email, password=password)
+                    uid = user.uid
+                    
+                    user_data = {
+                        'uid': uid,
+                        'email': email,
+                        'role': role,
+                        'first_name': first_name,
+                        'last_name': last_name,
+                        'created_at': firestore.SERVER_TIMESTAMP
+                    }
+                    if role == 'doctor':
+                        user_data['is_approved'] = True
+                        user_data['specialization'] = request.POST.get('specialization', '')
+                        user_data['license_number'] = request.POST.get('license_number', '')
+                        
+                    db.collection('users').document(uid).set(user_data)
+                    messages.success(request, f'{role.capitalize()} added successfully!')
+                except Exception as e:
+                    messages.error(request, f'Error creating user: {e}')
+                    
+            elif action == 'edit_user':
+                uid = request.POST.get('user_id')
+                update_data = {
+                    'first_name': request.POST.get('first_name', ''),
+                    'last_name': request.POST.get('last_name', ''),
+                }
+                role = request.POST.get('role', '')
+                if role == 'doctor':
+                    update_data['specialization'] = request.POST.get('specialization', '')
+                    update_data['license_number'] = request.POST.get('license_number', '')
+                    
+                db.collection('users').document(uid).update(update_data)
+                messages.success(request, 'User updated successfully!')
+                
+            elif action == 'delete_appointment':
+                app_id = request.POST.get('appointment_id')
+                db.collection('appointments').document(app_id).delete()
+                messages.success(request, 'Appointment deleted successfully!')
+                
+            elif action == 'edit_appointment':
+                app_id = request.POST.get('appointment_id')
+                status = request.POST.get('status')
+                db.collection('appointments').document(app_id).update({'status': status})
+                messages.success(request, 'Appointment updated successfully!')
+                
+        except Exception as e:
+            messages.error(request, f'Error: {e}')
+            
+        return redirect('admin_dashboard')
+
+    try:
+        # 1. Fetch All Doctors
+        doctors_docs = db.collection('users').where('role', '==', 'doctor').stream()
+        doctors = []
+        for doc in doctors_docs:
+            d = doc.to_dict()
+            d['id'] = doc.id
+            d['full_name'] = f"{d.get('first_name', '')} {d.get('last_name', '')}"
+            doctors.append(d)
+            
+        # 2. Fetch All Patients
+        patients_docs = db.collection('users').where('role', '==', 'patient').stream()
+        patients = []
+        for doc in patients_docs:
+            p = doc.to_dict()
+            p['id'] = doc.id
+            p['full_name'] = f"{p.get('first_name', '')} {p.get('last_name', '')}"
+            patients.append(p)
+            
+        # 3. Fetch All Appointments
+        apps_docs = db.collection('appointments').order_by('created_at', direction='DESCENDING').stream()
+        appointments = []
+        for doc in apps_docs:
+            a = doc.to_dict()
+            a['id'] = doc.id
+            appointments.append(a)
+            
+        context = {
+            'title': 'Unified Admin Dashboard',
+            'doctors': doctors,
+            'patients': patients,
+            'appointments': appointments,
+            'total_users': len(doctors) + len(patients),
+            'total_doctors': len(doctors),
+            'total_patients': len(patients),
+            'total_appointments': len(appointments),
+        }
+        return render(request, 'admin-dashboard.html', context)
+    except Exception as e:
+        messages.error(request, f'Error: {e}')
+        return redirect('dashboard')
+
+
 def about(request):
     """About page view"""
     context = {'title': 'About Us'}
     return render(request, 'about.html', context)
 
+def admin_setup_view(request):
+    """
+    Emergency view to create/reset the admin user.
+    PROTECTED: requires ?token=<ADMIN_SETUP_TOKEN> query parameter.
+    Set ADMIN_SETUP_TOKEN in your .env file. Remove this URL from urls.py after first use.
+    """
+    import os
+    from firebase_admin import auth, firestore
+    from telemedicine.firestore_db import db
 
-@login_required(login_url='login')
-def admin_doctors_list(request):
-    """Admin page to view list of all doctors"""
-    if not request.user.is_superuser:
-        messages.error(request, 'Access denied. Admin only.')
-        return redirect('home')
-    
-    doctors = DoctorProfile.objects.select_related('user').all().order_by('-created_at')
-    
-    context = {
-        'title': 'Manage Doctors',
-        'doctors': doctors,
-        'total_doctors': doctors.count(),
-        'approved_doctors': doctors.filter(is_approved=True).count(),
-        'pending_doctors': doctors.filter(is_approved=False).count(),
-    }
-    return render(request, 'admin-doctors-list.html', context)
+    # Token-gate: prevent unauthorized access
+    expected_token = os.environ.get('ADMIN_SETUP_TOKEN', '')
+    provided_token = request.GET.get('token', '')
+    if not expected_token or provided_token != expected_token:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden('403 Forbidden — valid ?token= required.')
 
+    email = os.environ.get('ADMIN_EMAIL', 'admin@telemedicine.com')
+    password = os.environ.get('ADMIN_SETUP_PASSWORD', '')
 
-@login_required(login_url='login')
-def admin_doctor_detail(request, doctor_id):
-    """Admin page to view specific doctor profile with their patients and diseases"""
-    if not request.user.is_superuser:
-        messages.error(request, 'Access denied. Admin only.')
-        return redirect('home')
-    
+    if not password:
+        return HttpResponse('❌ Error: ADMIN_SETUP_PASSWORD is not set in .env', status=500)
+
     try:
-        doctor_profile = DoctorProfile.objects.select_related('user').get(id=doctor_id)
-    except DoctorProfile.DoesNotExist:
-        messages.error(request, 'Doctor not found.')
-        return redirect('admin_doctors_list')
-    
-    # Get all appointments for this doctor
-    from appointments.models import Appointment
-    appointments = Appointment.objects.filter(
-        doctor=doctor_profile
-    ).select_related('patient', 'disease').order_by('-appointment_date')
-    
-    # Prepare patient data
-    patients_data = []
-    unique_patients = {}
-    
-    for appointment in appointments:
-        patient = appointment.patient
+        # Clean up existing
+        try:
+            old = auth.get_user_by_email(email)
+            auth.delete_user(old.uid)
+        except: pass
+
+        # Create fresh
+        user = auth.create_user(email=email, password=password)
+        uid = user.uid
+
+        # Firestore doc
+        db.collection('users').document(uid).set({
+            'uid': uid,
+            'email': email,
+            'role': 'admin',
+            'first_name': 'System',
+            'last_name': 'Admin',
+            'is_approved': True
+        })
+        # Don't echo password back in the response
+        return HttpResponse(f'✅ Admin created! Login with: {email}')
+    except Exception as e:
+        return HttpResponse(f"❌ Error: {str(e)}")
+
+
+@login_required(login_url='login')
+def approve_doctor(request, doctor_id):
+    """Admin action to approve a doctor in Firestore"""
+    if request.user.role != 'admin':
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('dashboard')
         
-        if patient.id not in unique_patients:
-            unique_patients[patient.id] = {
-                'patient': patient,
-                'diseases': [],
-                'appointments': [],
-            }
+    from telemedicine.firestore_db import db
+    try:
+        db.collection('users').document(str(doctor_id)).update({'is_approved': True})
+        messages.success(request, 'Doctor approved successfully!')
+    except Exception as e:
+        messages.error(request, f'Error approving doctor: {e}')
         
-        if appointment.disease and appointment.disease.name not in unique_patients[patient.id]['diseases']:
-            unique_patients[patient.id]['diseases'].append(appointment.disease.name)
-        
-        unique_patients[patient.id]['appointments'].append(appointment)
-    
-    patients_data = list(unique_patients.values())
-    
-    context = {
-        'title': f'Doctor Profile - {doctor_profile.user.get_full_name()}',
-        'doctor': doctor_profile,
-        'patients_data': patients_data,
-        'total_patients': len(unique_patients),
-        'total_appointments': appointments.count(),
-    }
-    return render(request, 'admin-doctor-detail.html', context)
+    return redirect('admin_dashboard')
 
 
 @login_required(login_url='login')
 def my_appointments(request):
-    """View all user's appointments with management options"""
+    """View all patient's appointments from Firestore"""
     if request.user.role != 'patient':
         messages.error(request, 'This page is only for patients.')
         return redirect('dashboard')
     
+    from telemedicine.firestore_db import db
+    from datetime import datetime
     try:
-        patient = request.user.patient_profile
-        now = timezone.now()
+        appointments_ref = db.collection('appointments')
         
-        # Get all appointments
-        all_appointments = Appointment.objects.filter(patient=patient).order_by('-appointment_date')
+        # Get all appointments for this patient
+        query = appointments_ref.where('patient_id', '==', request.user.uid).stream()
         
-        # Categorize appointments
-        upcoming = all_appointments.filter(
-            appointment_date__gte=now,
-            status='scheduled'
-        )
+        all_appointments = []
+        for doc in query:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            all_appointments.append(data)
+            
+        # Categorize
+        upcoming = [a for a in all_appointments if a.get('status') == 'scheduled']
+        completed = [a for a in all_appointments if a.get('status') == 'completed']
+        cancelled = [a for a in all_appointments if a.get('status') == 'cancelled']
         
-        completed = all_appointments.filter(status='completed')
-        cancelled = all_appointments.filter(status='cancelled')
+        # Sort
+        upcoming.sort(key=lambda x: x.get('appointment_date', ''), reverse=True)
+        completed.sort(key=lambda x: x.get('appointment_date', ''), reverse=True)
         
         context = {
             'title': 'My Appointments',
@@ -536,7 +700,15 @@ def my_appointments(request):
             'upcoming_appointments': upcoming,
             'completed_appointments': completed,
             'cancelled_appointments': cancelled,
-            'total_appointments': all_appointments.count(),
+            'total_appointments': len(all_appointments),
+            # Firebase Config
+            'FIREBASE_API_KEY': settings.FIREBASE_API_KEY,
+            'FIREBASE_AUTH_DOMAIN': settings.FIREBASE_AUTH_DOMAIN,
+            'FIREBASE_PROJECT_ID': settings.FIREBASE_PROJECT_ID,
+            'FIREBASE_STORAGE_BUCKET': settings.FIREBASE_STORAGE_BUCKET,
+            'FIREBASE_MESSAGING_SENDER_ID': settings.FIREBASE_MESSAGING_SENDER_ID,
+            'FIREBASE_APP_ID': settings.FIREBASE_APP_ID,
+            'FIREBASE_CUSTOM_TOKEN': firebase_admin.auth.create_custom_token(request.user.uid).decode('utf-8'),
         }
         
         return render(request, 'my-appointments.html', context)
@@ -548,40 +720,54 @@ def my_appointments(request):
 
 @login_required(login_url='login')
 def doctor_appointments(request):
-    """View all doctor's appointments with management options"""
+    """View all doctor's appointments from Firestore"""
     if request.user.role != 'doctor':
         messages.error(request, 'This page is only for doctors.')
         return redirect('dashboard')
     
     # Check if doctor is approved
-    if hasattr(request.user, 'doctor_profile') and not request.user.doctor_profile.is_approved:
+    is_approved = request.user.data.get('is_approved', False)
+    if not is_approved:
         messages.warning(request, '⏳ Your doctor account is pending admin approval. You cannot view patient appointments yet.')
         return redirect('dashboard')
     
+    from telemedicine.firestore_db import db
     try:
-        doctor = request.user.doctor_profile
-        now = timezone.now()
+        appointments_ref = db.collection('appointments')
         
-        # Get all appointments
-        all_appointments = Appointment.objects.filter(doctor=doctor).order_by('-appointment_date')
+        # Get all appointments for this doctor
+        query = appointments_ref.where('doctor_id', '==', request.user.uid).stream()
         
-        # Categorize appointments
-        upcoming = all_appointments.filter(
-            appointment_date__gte=now,
-            status='scheduled'
-        )
+        all_appointments = []
+        for doc in query:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            all_appointments.append(data)
+            
+        # Categorize
+        upcoming = [a for a in all_appointments if a.get('status') == 'scheduled']
+        completed = [a for a in all_appointments if a.get('status') == 'completed']
+        cancelled = [a for a in all_appointments if a.get('status') == 'cancelled']
         
-        completed = all_appointments.filter(status='completed')
-        cancelled = all_appointments.filter(status='cancelled')
+        # Sort
+        upcoming.sort(key=lambda x: x.get('appointment_date', ''), reverse=True)
+        completed.sort(key=lambda x: x.get('appointment_date', ''), reverse=True)
         
         context = {
             'title': 'My Appointments',
             'user': request.user,
-            'doctor': doctor,
             'upcoming_appointments': upcoming,
             'completed_appointments': completed,
             'cancelled_appointments': cancelled,
-            'total_appointments': all_appointments.count(),
+            'total_appointments': len(all_appointments),
+            # Firebase Config
+            'FIREBASE_API_KEY': settings.FIREBASE_API_KEY,
+            'FIREBASE_AUTH_DOMAIN': settings.FIREBASE_AUTH_DOMAIN,
+            'FIREBASE_PROJECT_ID': settings.FIREBASE_PROJECT_ID,
+            'FIREBASE_STORAGE_BUCKET': settings.FIREBASE_STORAGE_BUCKET,
+            'FIREBASE_MESSAGING_SENDER_ID': settings.FIREBASE_MESSAGING_SENDER_ID,
+            'FIREBASE_APP_ID': settings.FIREBASE_APP_ID,
+            'FIREBASE_CUSTOM_TOKEN': firebase_admin.auth.create_custom_token(request.user.uid).decode('utf-8'),
         }
         
         return render(request, 'doctor-appointments.html', context)
@@ -666,3 +852,323 @@ def booking_status(request):
     </html>
     """
     return HttpResponse(html)
+
+
+@login_required(login_url='login')
+def video_call(request, appointment_id):
+    """Video call UI using Firestore appointment data"""
+    from telemedicine.firestore_db import db
+    try:
+        doc_ref = db.collection('appointments').document(str(appointment_id))
+        doc = doc_ref.get()
+        
+        if not doc.exists:
+            messages.error(request, 'Appointment not found.')
+            return redirect('dashboard')
+            
+        appointment = doc.to_dict()
+        appointment['id'] = doc.id
+        
+        # Verify access
+        # Get all appointments for this patient
+        query = appointments_ref.where('patient_id', '==', request.user.uid).stream()
+        
+        all_appointments = []
+        for doc in query:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            all_appointments.append(data)
+            
+        # Categorize
+        upcoming = [a for a in all_appointments if a.get('status') == 'scheduled']
+        completed = [a for a in all_appointments if a.get('status') == 'completed']
+        cancelled = [a for a in all_appointments if a.get('status') == 'cancelled']
+        
+        # Sort
+        upcoming.sort(key=lambda x: x.get('appointment_date', ''), reverse=True)
+        completed.sort(key=lambda x: x.get('appointment_date', ''), reverse=True)
+        
+        context = {
+            'title': 'My Appointments',
+            'user': request.user,
+            'upcoming_appointments': upcoming,
+            'completed_appointments': completed,
+            'cancelled_appointments': cancelled,
+            'total_appointments': len(all_appointments),
+            # Firebase Config
+            'FIREBASE_API_KEY': settings.FIREBASE_API_KEY,
+            'FIREBASE_AUTH_DOMAIN': settings.FIREBASE_AUTH_DOMAIN,
+            'FIREBASE_PROJECT_ID': settings.FIREBASE_PROJECT_ID,
+            'FIREBASE_STORAGE_BUCKET': settings.FIREBASE_STORAGE_BUCKET,
+            'FIREBASE_MESSAGING_SENDER_ID': settings.FIREBASE_MESSAGING_SENDER_ID,
+            'FIREBASE_APP_ID': settings.FIREBASE_APP_ID,
+            'FIREBASE_CUSTOM_TOKEN': firebase_admin.auth.create_custom_token(request.user.uid).decode('utf-8'),
+        }
+        
+        return render(request, 'my-appointments.html', context)
+    
+    except Exception as e:
+        messages.error(request, f'Error loading appointments: {str(e)}')
+        return redirect('dashboard')
+
+
+@login_required(login_url='login')
+def doctor_appointments(request):
+    """View all doctor's appointments from Firestore"""
+    if request.user.role != 'doctor':
+        messages.error(request, 'This page is only for doctors.')
+        return redirect('dashboard')
+    
+    # Check if doctor is approved
+    is_approved = request.user.data.get('is_approved', False)
+    if not is_approved:
+        messages.warning(request, '⏳ Your doctor account is pending admin approval. You cannot view patient appointments yet.')
+        return redirect('dashboard')
+    
+    from telemedicine.firestore_db import db
+    try:
+        appointments_ref = db.collection('appointments')
+        
+        # Get all appointments for this doctor
+        query = appointments_ref.where('doctor_id', '==', request.user.uid).stream()
+        
+        all_appointments = []
+        for doc in query:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            all_appointments.append(data)
+            
+        # Categorize
+        upcoming = [a for a in all_appointments if a.get('status') == 'scheduled']
+        completed = [a for a in all_appointments if a.get('status') == 'completed']
+        cancelled = [a for a in all_appointments if a.get('status') == 'cancelled']
+        
+        # Sort
+        upcoming.sort(key=lambda x: x.get('appointment_date', ''), reverse=True)
+        completed.sort(key=lambda x: x.get('appointment_date', ''), reverse=True)
+        
+        context = {
+            'title': 'My Appointments',
+            'user': request.user,
+            'upcoming_appointments': upcoming,
+            'completed_appointments': completed,
+            'cancelled_appointments': cancelled,
+            'total_appointments': len(all_appointments),
+            # Firebase Config
+            'FIREBASE_API_KEY': settings.FIREBASE_API_KEY,
+            'FIREBASE_AUTH_DOMAIN': settings.FIREBASE_AUTH_DOMAIN,
+            'FIREBASE_PROJECT_ID': settings.FIREBASE_PROJECT_ID,
+            'FIREBASE_STORAGE_BUCKET': settings.FIREBASE_STORAGE_BUCKET,
+            'FIREBASE_MESSAGING_SENDER_ID': settings.FIREBASE_MESSAGING_SENDER_ID,
+            'FIREBASE_APP_ID': settings.FIREBASE_APP_ID,
+            'FIREBASE_CUSTOM_TOKEN': firebase_admin.auth.create_custom_token(request.user.uid).decode('utf-8'),
+        }
+        
+        return render(request, 'doctor-appointments.html', context)
+    
+    except Exception as e:
+        messages.error(request, f'Error loading appointments: {str(e)}')
+        return redirect('dashboard')
+
+
+def services(request):
+    """Services page view"""
+    context = {'title': 'Services'}
+    return render(request, 'services.html', context)
+
+
+def booking_status(request):
+    """Status check page for debugging booking form issues"""
+    from django.http import HttpResponse
+    
+    doctor_id = request.GET.get('doctor_id', 'N/A')
+    is_logged_in = request.user.is_authenticated
+    user_email = request.user.email if is_logged_in else 'N/A'
+    user_role = request.user.role if (is_logged_in and hasattr(request.user, 'role')) else 'N/A'
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Booking Status</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }}
+            .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }}
+            h1 {{ color: #333; }}
+            .status {{ padding: 15px; margin: 10px 0; border-radius: 5px; }}
+            .ok {{ background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }}
+            .error {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
+            .info {{ background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }}
+            code {{ background: #f0f0f0; padding: 2px 6px; border-radius: 3px; }}
+            .step {{ padding: 10px; margin: 10px 0; background: #f9f9f9; border-left: 4px solid #667eea; }}
+            a {{ color: #667eea; text-decoration: none; }}
+            a:hover {{ text-decoration: underline; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📋 Booking Form - Status Check</h1>
+            
+            <div class="status {'ok' if is_logged_in else 'error'}">
+                <strong>✓ Login Status:</strong> {'LOGGED IN' if is_logged_in else 'NOT LOGGED IN'}
+                {f'<br/>Email: {user_email}' if is_logged_in else ''}
+                {f'<br/>Role: {user_role}' if is_logged_in else ''}
+            </div>
+            
+            <div class="status {'ok' if doctor_id != 'N/A' else 'error'}">
+                <strong>{'✓' if doctor_id != 'N/A' else '✗'} Doctor ID:</strong> {doctor_id}
+            </div>
+            
+            <div class="status info">
+                <strong>Current URL:</strong> <code>{request.get_full_path()}</code>
+            </div>
+            
+            <h2>🔧 If Form Not Showing:</h2>
+            
+            {'<div class="step"><strong>1️⃣ Not Logged In</strong><br/>Visit: <a href="/login/">Login Page</a><br/>Use: pshyam@telemedicine.com</div>' if not is_logged_in else ''}
+            
+            {'<div class="step"><strong>2️⃣ No Doctor ID</strong><br/><a href="/book-appointment/?doctor_id=7">Try: /book-appointment/?doctor_id=7</a></div>' if doctor_id == 'N/A' else ''}
+            
+            {'<div class="step"><strong>3️⃣ Clear Cache</strong><br/>Press: Ctrl + Shift + Delete<br/>Then refresh page</div>' if is_logged_in and doctor_id != 'N/A' else ''}
+            
+            <h2>✅ Next Steps:</h2>
+            {f'<div class="step" style="background: #d4edda;"><strong>✓ Ready!</strong><br/><a href="/book-appointment/?doctor_id={doctor_id}">Go to Booking Form (Doctor {doctor_id})</a></div>' if (is_logged_in and doctor_id != 'N/A') else '<div class="step">Complete troubleshooting above</div>'}
+            
+            <h2>📞 Quick Links:</h2>
+            <ul>
+                <li><a href="/dashboard/">🏠 Dashboard</a></li>
+                <li><a href="/find-doctor/">🔍 Find Doctor</a></li>
+                <li><a href="/my-appointments/">📅 My Appointments</a></li>
+                <li><a href="/logout/">🚪 Logout</a></li>
+            </ul>
+        </div>
+    </body>
+    </html>
+    """
+    return HttpResponse(html)
+
+
+@login_required(login_url='login')
+def video_call(request, appointment_id):
+    """Video call UI using Firestore appointment data"""
+    from telemedicine.firestore_db import db
+    try:
+        doc_ref = db.collection('appointments').document(str(appointment_id))
+        doc = doc_ref.get()
+        
+        if not doc.exists:
+            messages.error(request, 'Appointment not found.')
+            return redirect('dashboard')
+            
+        appointment = doc.to_dict()
+        appointment['id'] = doc.id
+        
+        # Verify access
+        is_patient = request.user.role == 'patient' and appointment.get('patient_id') == request.user.uid
+        is_doctor = request.user.role == 'doctor' and appointment.get('doctor_id') == request.user.uid
+        
+        if not (is_patient or is_doctor):
+            messages.error(request, 'You do not have permission to join this call.')
+            return redirect('dashboard')
+            
+        context = {
+            'title': 'Video Consultation',
+            'appointment': appointment,
+            'user': request.user,
+            'is_patient': is_patient,
+            'is_doctor': is_doctor,
+        }
+        return render(request, 'video-call.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Error joining call: {str(e)}')
+        return redirect('dashboard')
+
+
+@login_required(login_url='login')
+def delete_user_admin(request, user_id):
+    """Admin action to delete a user from Firestore"""
+    if request.user.role != 'admin':
+        messages.error(request, 'Access denied. Admin only.')
+        return redirect('dashboard')
+        
+    from telemedicine.firestore_db import db
+    try:
+        # Note: This deletes from Firestore.
+        db.collection('users').document(str(user_id)).delete()
+        messages.success(request, 'User deleted successfully!')
+    except Exception as e:
+        messages.error(request, f'Error deleting user: {e}')
+        
+    return redirect('admin_dashboard')
+
+
+@login_required(login_url='login')
+def edit_profile(request):
+    """View to allow users to edit their own profile"""
+    from telemedicine.firestore_db import db
+    uid = str(request.user.uid)
+    
+    try:
+        user_doc_ref = db.collection('users').document(uid)
+        user_doc = user_doc_ref.get()
+        
+        if not user_doc.exists:
+            messages.error(request, 'User profile not found in database.')
+            return redirect('dashboard')
+            
+        user_data = user_doc.to_dict()
+        
+        if request.method == 'POST':
+            # Extract common fields
+            update_data = {
+                'first_name': request.POST.get('first_name', '').strip(),
+                'last_name': request.POST.get('last_name', '').strip(),
+                'profile_image_url': request.POST.get('profile_image_url', '').strip(),
+            }
+            
+            # Role-specific fields
+            if request.user.role == 'doctor':
+                update_data.update({
+                    'specialization': request.POST.get('specialization', '').strip().lower(),
+                    'license_number': request.POST.get('license_number', '').strip(),
+                    'experience_years': int(request.POST.get('experience_years', '0') or 0),
+                    'qualification': request.POST.get('qualification', '').strip(),
+                    'bio': request.POST.get('bio', '').strip(),
+                    'consultation_fee': float(request.POST.get('consultation_fee', '0') or 0),
+                })
+                # Handle checkboxes for available days
+                available_days = request.POST.getlist('available_days')
+                if available_days:
+                    update_data['available_days'] = available_days
+            elif request.user.role == 'patient':
+                update_data.update({
+                    'date_of_birth': request.POST.get('date_of_birth', '').strip(),
+                    'medical_history': request.POST.get('medical_history', '').strip(),
+                    'allergies': request.POST.get('allergies', '').strip(),
+                    'emergency_contact': request.POST.get('emergency_contact', '').strip(),
+                    'emergency_phone': request.POST.get('emergency_phone', '').strip(),
+                })
+            
+            # Update Firestore
+            user_doc_ref.update(update_data)
+            
+            # Update local Django User representation (for immediate session sync)
+            request.user.first_name = update_data['first_name']
+            request.user.last_name = update_data['last_name']
+            request.user.save()
+            
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('dashboard')
+            
+        context = {
+            'title': 'Edit Profile',
+            'profile': user_data
+        }
+        return render(request, 'edit-profile.html', context)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        messages.error(request, f'Error loading profile: {e}')
+        return redirect('dashboard')
