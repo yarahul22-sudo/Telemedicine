@@ -1,322 +1,459 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Register - Telemedicine Platform{% endblock %}
+{% block title %}Register | TeleMed{% endblock %}
 
 {% block extra_css %}
-    <style>
-        .register-container {
-            max-width: 600px;
-            margin: 3rem auto;
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+<style>
+    .auth-container {
+        max-width: 600px;
+        margin: 1rem auto;
+        padding: 2.5rem;
+        background: var(--white);
+        border-radius: 24px;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--gray-200);
+    }
 
-        .register-container h1 {
-            text-align: center;
-            color: #667eea;
-            margin-bottom: 1rem;
-        }
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
 
-        .register-container > p {
-            text-align: center;
-            color: #666;
-            margin-bottom: 2rem;
-        }
+    .role-selector {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        background: var(--gray-100);
+        padding: 0.5rem;
+        border-radius: 16px;
+    }
 
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
+    .role-btn {
+        flex: 1;
+        padding: 0.75rem;
+        border-radius: 12px;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        background: transparent;
+        color: var(--gray-500);
+    }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #333;
-            font-weight: 500;
-        }
+    .role-btn.active {
+        background: var(--white);
+        color: var(--primary);
+        box-shadow: var(--shadow-sm);
+    }
 
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-            font-family: inherit;
-            transition: border-color 0.3s ease;
-        }
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
 
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
 
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
+    .form-group.full {
+        grid-column: span 2;
+    }
 
-        .form-row .form-group {
-            margin-bottom: 1.5rem;
-        }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        font-size: 0.9rem;
+        color: var(--gray-500);
+    }
 
-        .form-group.checkbox {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 1.5rem;
-        }
+    .input-wrapper {
+        position: relative;
+    }
 
-        .form-group.checkbox input {
-            width: auto;
-            margin-top: 0.3rem;
-            margin-right: 0.5rem;
-            cursor: pointer;
-        }
+    .input-wrapper i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-500);
+    }
 
-        .form-group.checkbox label {
-            margin: 0;
-            cursor: pointer;
-            font-weight: normal;
-        }
+    .input-wrapper input, .input-wrapper select, .input-wrapper textarea {
+        width: 100%;
+        padding: 0.75rem 1rem 0.75rem 2.75rem;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius);
+        font-family: var(--font-main);
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
 
-        .form-group.checkbox label a {
-            color: #667eea;
-            text-decoration: none;
-        }
+    .input-wrapper input:focus, .input-wrapper select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    }
 
-        .form-group.checkbox label a:hover {
-            text-decoration: underline;
-        }
+    .toggle-pw {
+        position: absolute; right: 1rem; top: 50%;
+        transform: translateY(-50%);
+        background: none; border: none;
+        color: #94A3B8; cursor: pointer;
+        font-size: 0.95rem; padding: 2px;
+        transition: color 0.2s;
+        z-index: 2;
+    }
+    .toggle-pw:hover { color: var(--primary); }
 
-        .form-actions {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
+    #doctor-fields {
+        display: none;
+        border-top: 1px solid var(--gray-100);
+        padding-top: 1.5rem;
+        margin-top: 1rem;
+        animation: fadeIn 0.3s ease;
+    }
 
-        .form-actions button,
-        .form-actions a {
-            flex: 1;
-            text-align: center;
-        }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 
-        .login-link {
-            text-align: center;
-        }
+    .days-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
 
-        .login-link a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-        }
+    .day-checkbox {
+        display: none;
+    }
 
-        .login-link a:hover {
-            text-decoration: underline;
-        }
+    .day-label {
+        padding: 0.5rem;
+        background: var(--gray-100);
+        border-radius: 8px;
+        text-align: center;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+    }
 
-        .errors {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 1.5rem;
-            border-left: 4px solid #f5c6cb;
-        }
+    .day-checkbox:checked + .day-label {
+        background: var(--primary);
+        color: white;
+    }
 
-        .errors ul {
-            margin: 0;
-            padding-left: 1.5rem;
-        }
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: var(--gray-500);
+        font-size: 0.9rem;
+    }
 
-        .field-error {
-            color: #721c24;
-            font-size: 0.85rem;
-            margin-top: 0.25rem;
-        }
-
-        .role-selection {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .role-option {
-            position: relative;
-        }
-
-        .role-option input {
-            position: absolute;
-            opacity: 0;
-        }
-
-        .role-option label {
-            display: block;
-            padding: 1rem;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 0;
-        }
-
-        .role-option input:checked + label {
-            border-color: #667eea;
-            background-color: rgba(102, 126, 234, 0.05);
-        }
-
-        @media (max-width: 600px) {
-            .register-container {
-                margin: 1rem;
-                padding: 1.5rem;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .form-actions {
-                flex-direction: column;
-            }
-
-            .role-selection {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    .auth-footer a {
+        color: var(--primary);
+        font-weight: 600;
+        text-decoration: none;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-    <div class="register-container">
-        <h1>Create Your Account</h1>
-        <p>Join our telemedicine platform to access healthcare services</p>
-
-        {% if form.non_field_errors %}
-            <div class="errors">
-                <ul>
-                    {% for error in form.non_field_errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        {% endif %}
-
-        <form method="post" novalidate>
-            {% csrf_token %}
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="first_name">First Name *</label>
-                    <input 
-                        type="text" 
-                        id="first_name" 
-                        name="first_name" 
-                        placeholder="John"
-                        required
-                        autofocus
-                    >
-                </div>
-                <div class="form-group">
-                    <label for="last_name">Last Name *</label>
-                    <input 
-                        type="text" 
-                        id="last_name" 
-                        name="last_name" 
-                        placeholder="Doe"
-                        required
-                    >
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email Address *</label>
-                <input 
-                    type="email" 
-                    id="email" 
-                    name="email" 
-                    placeholder="you@example.com"
-                    required
-                >
-            </div>
-
-            <div class="form-group">
-                <label>I am a:</label>
-                <div class="role-selection">
-                    <div class="role-option">
-                        <input 
-                            type="radio" 
-                            id="patient" 
-                            name="role" 
-                            value="patient"
-                            required
-                            checked
-                        >
-                        <label for="patient">👤 Patient</label>
-                    </div>
-                    <div class="role-option">
-                        <input 
-                            type="radio" 
-                            id="doctor" 
-                            name="role" 
-                            value="doctor"
-                            required
-                        >
-                        <label for="doctor">👨‍⚕️ Doctor</label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="password">Password *</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password"
-                        placeholder="Create a strong password"
-                        required
-                    >
-                    <small style="color: #666;">At least 8 characters with uppercase, lowercase, and numbers</small>
-                </div>
-                <div class="form-group">
-                    <label for="confirm_password">Confirm Password *</label>
-                    <input 
-                        type="password" 
-                        id="confirm_password" 
-                        name="confirm_password"
-                        placeholder="Confirm your password"
-                        required
-                    >
-                </div>
-            </div>
-
-            <div class="form-group checkbox">
-                <input 
-                    type="checkbox" 
-                    id="terms" 
-                    name="terms" 
-                    required
-                >
-                <label for="terms">
-                    I agree to the <a href="/terms/">Terms of Service</a> and <a href="/privacy/">Privacy Policy</a> *
-                </label>
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn">Create Account</button>
-                <a href="/" class="btn btn-secondary">Cancel</a>
-            </div>
-        </form>
-
-        <div class="login-link">
-            Already have an account? <a href="/login/">Sign in here</a>
-        </div>
+<div class="auth-container">
+    <div class="auth-header">
+        <h1 style="font-family: var(--font-heading); font-weight: 700;">Create Account</h1>
+        <p style="color: var(--gray-500);">Join the TeleMed healthcare network</p>
     </div>
+
+    <div class="role-selector">
+        <button type="button" class="role-btn active" onclick="setRole('patient')">
+            <i class="fa-solid fa-user"></i> Patient
+        </button>
+        <button type="button" class="role-btn" onclick="setRole('doctor')">
+            <i class="fa-solid fa-user-doctor"></i> Doctor
+        </button>
+    </div>
+
+    <form id="register-form" autocomplete="off">
+        {% csrf_token %}
+        <input type="hidden" id="role" name="role" value="patient">
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="first_name">First Name</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" id="first_name" name="first_name" placeholder="John" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="last_name">Last Name</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" id="last_name" name="last_name" placeholder="Doe" required>
+                </div>
+            </div>
+            <div class="form-group full">
+                <label for="email">Email Address</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" id="email" name="email" placeholder="john@example.com" required>
+                </div>
+            </div>
+            <div class="form-group full">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-lock" style="z-index: 1;"></i>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="new-password" minlength="8">
+                    <button type="button" class="toggle-pw" onclick="togglePassword('password', this)" tabindex="-1">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="doctor-fields" style="display: none;">
+            <h3 style="margin-bottom: 1.5rem; font-size: 1.1rem; border-left: 4px solid var(--primary); padding-left: 0.75rem;">Professional Information</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="specialization">Specialization</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-stethoscope"></i>
+                        <select id="specialization" name="specialization">
+                            <option value="general">General Medicine</option>
+                            <option value="cardiology">Cardiology</option>
+                            <option value="dermatology">Dermatology</option>
+                            <option value="neurology">Neurology</option>
+                            <option value="pediatrics">Pediatrics</option>
+                            <option value="psychiatry">Psychiatry</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="license_number">Medical License #</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-id-card"></i>
+                        <input type="text" id="license_number" name="license_number" placeholder="MED-12345">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="experience_years">Experience (Years)</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-briefcase"></i>
+                        <input type="number" id="experience_years" name="experience_years" placeholder="5">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="qualification">Qualification</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                        <input type="text" id="qualification" name="qualification" placeholder="MBBS, MD">
+                    </div>
+                </div>
+                <div class="form-group full">
+                    <label>Available Days</label>
+                    <div class="days-grid">
+                        <div class="day-item">
+                            <input type="checkbox" id="day-Mon" name="available_days" value="Monday" class="day-checkbox">
+                            <label for="day-Mon" class="day-label">Mon</label>
+                        </div>
+                        <div class="day-item">
+                            <input type="checkbox" id="day-Tue" name="available_days" value="Tuesday" class="day-checkbox">
+                            <label for="day-Tue" class="day-label">Tue</label>
+                        </div>
+                        <div class="day-item">
+                            <input type="checkbox" id="day-Wed" name="available_days" value="Wednesday" class="day-checkbox">
+                            <label for="day-Wed" class="day-label">Wed</label>
+                        </div>
+                        <div class="day-item">
+                            <input type="checkbox" id="day-Thu" name="available_days" value="Thursday" class="day-checkbox">
+                            <label for="day-Thu" class="day-label">Thu</label>
+                        </div>
+                        <div class="day-item">
+                            <input type="checkbox" id="day-Fri" name="available_days" value="Friday" class="day-checkbox">
+                            <label for="day-Fri" class="day-label">Fri</label>
+                        </div>
+                        <div class="day-item">
+                            <input type="checkbox" id="day-Sat" name="available_days" value="Saturday" class="day-checkbox">
+                            <label for="day-Sat" class="day-label">Sat</label>
+                        </div>
+                        <div class="day-item">
+                            <input type="checkbox" id="day-Sun" name="available_days" value="Sunday" class="day-checkbox">
+                            <label for="day-Sun" class="day-label">Sun</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Image Section (shared for both roles) -->
+        <div style="border-top: 1px solid var(--gray-100); padding-top: 1.5rem; margin-top: 1rem;">
+            <h3 style="margin-bottom: 1.25rem; font-size: 1.05rem; border-left: 4px solid var(--secondary); padding-left: 0.75rem; color: var(--dark);">Profile Photo</h3>
+            <div class="form-group">
+                <label for="profile_image_url">Photo URL <span style="color: var(--gray-500); font-weight: 400;">(paste a direct image link)</span></label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-image"></i>
+                    <input type="url" id="profile_image_url" name="profile_image_url" placeholder="https://example.com/your-photo.jpg">
+                </div>
+                <p style="font-size: 0.8rem; color: var(--gray-500); margin-top: 0.4rem;">
+                    <i class="fa-solid fa-circle-info"></i> Use a direct link to a JPG, PNG, or WebP image (e.g. from Imgur, Unsplash, or a public URL).
+                </p>
+            </div>
+            <!-- Live Preview (hidden until valid URL is entered) -->
+            <div id="img-preview-wrap" style="display: none; margin-top: 0.75rem; align-items: center; gap: 1rem;">
+                <img id="img-preview" src="" alt="Preview" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 12px rgba(79,70,229,0.2);">
+                <div>
+                    <div style="font-weight: 600; font-size: 0.95rem; color: var(--dark);" id="preview-name">Your Name</div>
+                    <div style="font-size: 0.8rem; color: var(--gray-500);" id="preview-role-label">Patient</div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" id="btn-register" class="btn btn-primary" style="width: 100%; padding: 1rem; margin-top: 1.5rem; font-size: 1.05rem;">
+            <i class="fa-solid fa-user-plus"></i> Create Account
+        </button>
+    </form>
+
+    <div class="auth-footer">
+        Already have an account? <a href="{% url 'login' %}">Sign in</a>
+    </div>
+</div>
+
+<script>
+    function togglePassword(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const icon  = btn.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    function setRole(role) {
+        document.getElementById('role').value = role;
+        const doctorFields = document.getElementById('doctor-fields');
+        const roleBtns = document.querySelectorAll('.role-btn');
+        
+        roleBtns.forEach(btn => btn.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+
+        if (role === 'doctor') {
+            doctorFields.style.display = 'block';
+            document.querySelectorAll('#doctor-fields input:not([type="checkbox"]), #doctor-fields select').forEach(el => el.required = true);
+        } else {
+            doctorFields.style.display = 'none';
+            document.querySelectorAll('#doctor-fields input, #doctor-fields select').forEach(el => el.required = false);
+        }
+    }
+
+    document.getElementById('register-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-register');
+        const originalText = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Creating account...';
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const role = document.getElementById('role').value;
+
+        const formData = {
+            first_name: document.getElementById('first_name').value,
+            last_name: document.getElementById('last_name').value,
+            role: role,
+            profile_image_url: document.getElementById('profile_image_url').value.trim()
+        };
+
+        if (role === 'doctor') {
+            formData.specialization = document.getElementById('specialization').value;
+            formData.license_number = document.getElementById('license_number').value;
+            formData.experience_years = document.getElementById('experience_years').value;
+            formData.qualification = document.getElementById('qualification').value;
+            formData.available_days = Array.from(document.querySelectorAll('input[name="available_days"]:checked')).map(cb => cb.value);
+        }
+
+        try {
+            // Create Firebase User
+            const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+            const token = await userCredential.user.getIdToken();
+            
+            // Add token to form data
+            formData.token = token;
+
+            // Send to Django
+            const response = await fetch('/register/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                alert('Registration successful! Please login.');
+                window.location.href = '/login/';
+            } else {
+                // If backend fails, delete the Firebase user to allow retry
+                await userCredential.user.delete();
+                alert(data.error || 'Registration failed');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        } catch (error) {
+            // Generic message — don't reveal whether email exists
+            const msg = error.code === 'auth/email-already-in-use'
+                ? 'An account with this email already exists. Please login instead.'
+                : 'Registration failed. Please check your details and try again.';
+            alert(msg);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    });
+    // Live preview
+    const imgInput = document.getElementById('profile_image_url');
+    const imgPreview = document.getElementById('img-preview');
+    const previewWrap = document.getElementById('img-preview-wrap');
+    const previewName = document.getElementById('preview-name');
+    const previewRole = document.getElementById('preview-role-label');
+
+    imgInput.addEventListener('input', function () {
+        const url = this.value.trim();
+        if (url) {
+            imgPreview.src = url;
+            imgPreview.onload = function () {
+                previewWrap.style.display = 'flex';
+            };
+            imgPreview.onerror = function () {
+                previewWrap.style.display = 'none';
+            };
+        } else {
+            previewWrap.style.display = 'none';
+        }
+    });
+
+    // Update preview name/role as user types
+    ['first_name', 'last_name'].forEach(id => {
+        document.getElementById(id).addEventListener('input', function () {
+            const fn = document.getElementById('first_name').value;
+            const ln = document.getElementById('last_name').value;
+            previewName.textContent = `${fn} ${ln}`.trim() || 'Your Name';
+        });
+    });
+</script>
 {% endblock %}

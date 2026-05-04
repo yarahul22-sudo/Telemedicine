@@ -1,223 +1,159 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Login - Telemedicine Platform{% endblock %}
+{% block title %}Login | TeleMed{% endblock %}
 
 {% block extra_css %}
-    <style>
-        .login-container {
-            max-width: 400px;
-            margin: 3rem auto;
-            background: white;
-            padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+<style>
+    body { background: linear-gradient(135deg, #EEF2FF 0%, #F8FAFC 60%, #E0F2FE 100%); }
 
-        .login-container h1 {
-            text-align: center;
-            color: #667eea;
-            margin-bottom: 2rem;
-        }
+    .auth-page { min-height: calc(100vh - 180px); display: flex; align-items: center; justify-content: center; padding: 2rem 0; }
 
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
+    .auth-container {
+        width: 100%; max-width: 460px;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 28px;
+        box-shadow: 0 25px 60px -10px rgba(79,70,229,0.15), 0 0 0 1px rgba(255,255,255,0.7);
+        overflow: hidden;
+    }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #333;
-            font-weight: 500;
-        }
+    .auth-brand {
+        background: linear-gradient(135deg, var(--primary) 0%, #7C3AED 100%);
+        padding: 2rem; text-align: center; color: white;
+    }
+    .brand-icon {
+        width: 64px; height: 64px; background: rgba(255,255,255,0.2);
+        border-radius: 18px; display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; margin: 0 auto 1rem; border: 1px solid rgba(255,255,255,0.3);
+    }
+    .auth-brand h1 { font-size: 1.6rem; font-weight: 800; margin: 0; }
+    .auth-brand p  { opacity: 0.85; font-size: 0.9rem; margin: 0.3rem 0 0; }
 
-        .form-group input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
-        }
+    .auth-body { padding: 2rem 2.5rem 2.5rem; }
 
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.85rem; color: #374151; }
 
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-            font-family: inherit;
-            resize: vertical;
-            transition: border-color 0.3s ease;
-        }
+    .input-wrapper { position: relative; }
+    .input-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94A3B8; font-size: 0.9rem; pointer-events: none; }
 
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
+    .input-wrapper input {
+        width: 100%; padding: 0.85rem 3rem 0.85rem 2.75rem;
+        border: 1.5px solid #E2E8F0; border-radius: 12px;
+        font-family: var(--font-main); font-size: 0.95rem;
+        background: #F8FAFC; transition: all 0.2s; color: #1E293B;
+    }
+    .input-wrapper input:focus {
+        outline: none; border-color: var(--primary);
+        background: white; box-shadow: 0 0 0 4px rgba(79,70,229,0.08);
+    }
 
-        .form-group select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: border-color 0.3s ease;
-        }
+    .toggle-pw {
+        position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+        background: none; border: none; color: #94A3B8; cursor: pointer;
+        font-size: 0.95rem; transition: color 0.2s; padding: 0;
+    }
+    .toggle-pw:hover { color: var(--primary); }
 
-        .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
+    .btn-auth {
+        width: 100%; padding: 0.9rem;
+        background: linear-gradient(135deg, var(--primary), #7C3AED);
+        color: white; border: none; border-radius: 12px;
+        font-size: 1rem; font-weight: 700; cursor: pointer;
+        transition: all 0.3s; box-shadow: 0 4px 15px rgba(79,70,229,0.35);
+        display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    .btn-auth:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(79,70,229,0.45); }
+    .btn-auth:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
 
-        .form-group.checkbox {
-            display: flex;
-            align-items: center;
-        }
+    .auth-divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; color: #94A3B8; font-size: 0.8rem; }
+    .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: #E2E8F0; }
 
-        .form-group.checkbox input {
-            width: auto;
-            margin-right: 0.5rem;
-        }
-
-        .form-group.checkbox label {
-            margin: 0;
-        }
-
-        .form-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .form-actions .btn {
-            width: 100%;
-            text-align: center;
-        }
-
-        .signup-link {
-            text-align: center;
-        }
-
-        .signup-link a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .signup-link a:hover {
-            text-decoration: underline;
-        }
-
-        .forgot-password {
-            text-align: center;
-            margin-bottom: 1rem;
-        }
-
-        .forgot-password a {
-            color: #667eea;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-
-        .forgot-password a:hover {
-            text-decoration: underline;
-        }
-
-        .errors {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 1.5rem;
-            border-left: 4px solid #f5c6cb;
-        }
-
-        .errors ul {
-            margin: 0;
-            padding-left: 1.5rem;
-        }
-
-        @media (max-width: 480px) {
-            .login-container {
-                margin: 1rem;
-                padding: 1.5rem;
-            }
-
-            .form-actions {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    .auth-footer { text-align: center; color: #64748B; font-size: 0.9rem; }
+    .auth-footer a { color: var(--primary); font-weight: 700; text-decoration: none; }
+    .auth-footer a:hover { text-decoration: underline; }
+</style>
 {% endblock %}
 
 {% block content %}
-    <div class="login-container">
-        <h1>Sign In</h1>
-
-        {% if form.non_field_errors %}
-            <div class="errors">
-                <ul>
-                    {% for error in form.non_field_errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        {% endif %}
-
-        <form method="post" novalidate>
+<div class="auth-page">
+<div class="auth-container">
+    <div class="auth-brand">
+        <div class="brand-icon"><i class="fa-solid fa-shield-heart"></i></div>
+        <h1>Welcome Back</h1>
+        <p>Sign in to your TeleMed account</p>
+    </div>
+    <div class="auth-body">
+        <form id="login-form" autocomplete="off">
             {% csrf_token %}
-
             <div class="form-group">
                 <label for="email">Email Address</label>
-                <input 
-                    type="email" 
-                    id="email" 
-                    name="email" 
-                    placeholder="you@example.com"
-                    required
-                    autofocus
-                >
-                {% if form.email.errors %}
-                    <span class="error">{{ form.email.errors.0 }}</span>
-                {% endif %}
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-envelope input-icon"></i>
+                    <input type="email" id="email" name="email" placeholder="name@example.com" required>
+                </div>
             </div>
-
             <div class="form-group">
                 <label for="password">Password</label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
-                    placeholder="Enter your password"
-                    required
-                >
-                {% if form.password.errors %}
-                    <span class="error">{{ form.password.errors.0 }}</span>
-                {% endif %}
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-lock input-icon"></i>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+                    <button type="button" class="toggle-pw" onclick="togglePw('password',this)" tabindex="-1">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
             </div>
-
-            <div class="forgot-password">
-                <a href="/forgot-password/">Forgot your password?</a>
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn">Sign In</button>
-                <a href="/" class="btn btn-secondary">Cancel</a>
-            </div>
+            <button type="submit" id="btn-login" class="btn-auth">
+                <i class="fa-solid fa-right-to-bracket"></i> Sign In
+            </button>
         </form>
-
-        <div class="signup-link">
-            Don't have an account? <a href="/register/">Sign up here</a>
+        <div class="auth-divider">or</div>
+        <div class="auth-footer">
+            Don't have an account? <a href="{% url 'register' %}">Create account</a>
         </div>
     </div>
+</div>
+</div>
+
+<script>
+function togglePw(id, btn) {
+    const inp = document.getElementById(id);
+    const ico = btn.querySelector('i');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    ico.classList.toggle('fa-eye');
+    ico.classList.toggle('fa-eye-slash');
+}
+
+firebase.auth().signOut().catch(e => console.error("Sign out error:", e));
+
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-login');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...';
+
+    const email    = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    try {
+        const cred  = await firebase.auth().signInWithEmailAndPassword(email, password);
+        const token = await cred.user.getIdToken();
+        const resp  = await fetch('/login/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+            body: JSON.stringify({ token })
+        });
+        const data = await resp.json();
+        if (resp.ok) { window.location.href = data.redirect || '/dashboard/'; }
+        else { alert(data.error || 'Login failed'); btn.disabled = false; btn.innerHTML = orig; }
+    } catch (err) {
+        alert('Invalid email or password. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    }
+});
+</script>
 {% endblock %}

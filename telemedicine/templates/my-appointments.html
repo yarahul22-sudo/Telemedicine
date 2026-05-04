@@ -1,0 +1,468 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Appointments | TeleMed{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--primary) 0%, #7C3AED 100%);
+        padding: 4rem 2rem; border-radius: 24px; color: white;
+        margin-bottom: 3rem; position: relative; overflow: hidden;
+    }
+    .dashboard-header::after {
+        content: ''; position: absolute; top: -50%; right: -10%;
+        width: 400px; height: 400px; background: rgba(255,255,255,0.1); border-radius: 50%;
+    }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2.5rem; position: relative; z-index: 1; }
+    .stat-card { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2); }
+    .stat-value { font-size: 2.25rem; font-weight: 700; }
+    .stat-label { font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; }
+
+    .tabs-nav { display: inline-flex; background: var(--white); padding: 0.5rem; border-radius: 16px; box-shadow: var(--shadow-sm); margin-bottom: 2rem; gap: 0.5rem; }
+    .tab-btn { padding: 0.75rem 1.5rem; border: none; background: none; border-radius: 12px; cursor: pointer; font-weight: 600; color: var(--gray-500); transition: all 0.2s; }
+    .tab-btn.active { background: var(--primary); color: white; }
+    .tab-content { display: none; animation: fadeIn 0.4s ease; }
+    .tab-content.active { display: block; }
+
+    .appointment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 1.5rem; }
+    .appointment-card { background: var(--white); border-radius: 20px; padding: 2rem; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); transition: all 0.3s; }
+    .appointment-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
+
+    .status-badge { padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    .status-scheduled { background: #E0E7FF; color: #4338CA; }
+    .status-completed  { background: #D1FAE5; color: #065F46; }
+    .status-cancelled  { background: #FEE2E2; color: #991B1B; }
+
+    .card-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--gray-100); }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.6); z-index: 1000; backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; border-radius: 24px; width: 95%; max-width: 500px; padding: 2.5rem; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+    .chat-modal-content { max-width: 860px; height: 85vh; padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+
+    /* Chat bubbles */
+    .msg-bubble   { max-width: 78%; padding: 0.7rem 1rem; border-radius: 18px; font-size: 0.93rem; line-height: 1.45; word-break: break-word; }
+    .msg-sent     { align-self: flex-end;  background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+    .msg-received { align-self: flex-start; background: white; color: #1E293B; border-bottom-left-radius: 4px; border: 1px solid #E2E8F0; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    #chatMessages::-webkit-scrollbar       { width: 5px; }
+    #chatMessages::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Header ──────────────────────────────────────────────── -->
+<div class="dashboard-header">
+    <div style="position:relative;z-index:1;">
+        <h1 style="font-family:var(--font-heading);font-size:2.5rem;">Hello, {{ user.first_name }}!</h1>
+        <p style="opacity:0.9;font-size:1.1rem;">Manage your health consultations and clinical visits</p>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value">{{ upcoming_appointments|length }}</div><div class="stat-label">Upcoming</div></div>
+            <div class="stat-card"><div class="stat-value">{{ completed_appointments|length }}</div><div class="stat-label">Completed</div></div>
+            <div class="stat-card"><div class="stat-value">{{ cancelled_appointments|length }}</div><div class="stat-label">Cancelled</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Tabs ───────────────────────────────────────────────── -->
+<div class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab(event,'upcoming')"><i class="fa-solid fa-clock"></i> Upcoming</button>
+    <button class="tab-btn" onclick="switchTab(event,'completed')"><i class="fa-solid fa-circle-check"></i> Completed</button>
+    <button class="tab-btn" onclick="switchTab(event,'cancelled')"><i class="fa-solid fa-circle-xmark"></i> Cancelled</button>
+</div>
+
+<!-- Upcoming -->
+<div id="upcoming" class="tab-content active">
+    <div class="appointment-grid">
+        {% for app in upcoming_appointments %}
+        <div class="appointment-card" data-appointment-id="{{ app.id }}">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:1.5rem;">
+                <div style="display:flex;gap:1rem;align-items:center;">
+                    <div style="width:56px;height:56px;background:#EEF2FF;color:var(--primary);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;">{{ app.doctor_name|slice:":1" }}</div>
+                    <div>
+                        <h3 style="font-size:1.15rem;font-weight:700;">{{ app.doctor_name }}</h3>
+                        <p style="color:var(--gray-500);font-size:0.9rem;">{{ app.disease_name|default:"General Consultation" }}</p>
+                    </div>
+                </div>
+                <span class="status-badge status-scheduled">{{ app.status }}</span>
+            </div>
+            <div style="background:var(--gray-100);padding:1rem;border-radius:12px;margin-bottom:1.5rem;">
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;font-size:0.95rem;">
+                    <i class="fa-solid fa-calendar-day" style="color:var(--primary);width:20px;"></i>
+                    <span class="detail-value">{{ app.appointment_date }}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.95rem;">
+                    <i class="fa-solid fa-video" style="color:var(--primary);width:20px;"></i>
+                    <span class="detail-value">{{ app.consultation_type|title }} Consultation</span>
+                </div>
+                <div style="display:none;" class="detail-value">{{ app.notes|default:"None" }}</div>
+            </div>
+            <div class="card-actions">
+                <button class="btn btn-primary" onclick="openChatModal('{{ app.doctor_id }}','{{ app.doctor_name }}','{{ app.id }}')" style="grid-column:span 2;">
+                    <i class="fa-solid fa-comments"></i> Join Chat & Call
+                </button>
+                <button class="btn btn-outline" onclick="openViewDetailsModal('{{ app.id }}')"><i class="fa-solid fa-circle-info"></i> Details</button>
+                <button class="btn btn-outline" onclick="openRescheduleModal('{{ app.id }}')"><i class="fa-solid fa-calendar-pen"></i> Reschedule</button>
+                <button class="btn btn-outline" onclick="openCancelModal('{{ app.id }}')" style="grid-column:span 2;color:var(--danger);border-color:#FEE2E2;">
+                    <i class="fa-solid fa-trash-can"></i> Cancel Appointment
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div style="grid-column:1/-1;text-align:center;padding:5rem 2rem;background:white;border-radius:24px;">
+            <i class="fa-solid fa-calendar-xmark" style="font-size:4rem;color:var(--gray-200);margin-bottom:1.5rem;"></i>
+            <h3>No upcoming appointments</h3>
+            <p style="color:var(--gray-500);margin-bottom:2rem;">Time to schedule your next health checkup!</p>
+            <a href="{% url 'find_doctor' %}" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> Find a Doctor</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Completed -->
+<div id="completed" class="tab-content">
+    <div class="appointment-grid">
+        {% for app in completed_appointments %}
+        <div class="appointment-card" style="border-left:4px solid var(--secondary);">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:1rem;">
+                <h3 style="font-weight:700;">{{ app.doctor_name }}</h3>
+                <span class="status-badge status-completed">Completed</span>
+            </div>
+            <p style="color:var(--gray-500);font-size:0.95rem;margin-bottom:1.5rem;"><i class="fa-solid fa-calendar-check" style="margin-right:0.5rem;"></i>{{ app.appointment_date }}</p>
+            <button class="btn btn-outline" style="width:100%;" onclick="openViewDetailsModal('{{ app.id }}')"><i class="fa-solid fa-file-medical"></i> View Summary</button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Cancelled -->
+<div id="cancelled" class="tab-content">
+    <div class="appointment-grid">
+        {% for app in cancelled_appointments %}
+        <div class="appointment-card" style="opacity:0.7;">
+            <h3 style="font-weight:700;">{{ app.doctor_name }}</h3>
+            <p style="color:var(--danger);font-size:0.9rem;margin:0.5rem 0;">Cancelled</p>
+            <p style="font-size:0.9rem;color:var(--gray-500);">{{ app.appointment_date }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ── Details Modal ──────────────────────────────────────── -->
+<div id="detailsModal" class="modal">
+    <div class="modal-content">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+            <h2 style="font-family:var(--font-heading);font-weight:700;">Appointment Details</h2>
+            <button onclick="closeDetailsModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--gray-500);"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="appointmentDetailsContent"></div>
+        <button class="btn btn-primary" onclick="closeDetailsModal()" style="width:100%;margin-top:2rem;">Close</button>
+    </div>
+</div>
+
+<!-- ── Reschedule Modal ───────────────────────────────────── -->
+<div id="rescheduleModal" class="modal">
+    <div class="modal-content">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+            <h2 style="font-family:var(--font-heading);font-weight:700;">Reschedule</h2>
+            <button onclick="closeRescheduleModal()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="rescheduleForm">
+            <div style="margin-bottom:1.5rem;">
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;">New Date & Time</label>
+                <input type="datetime-local" id="newDate" style="width:100%;padding:0.75rem;border:1px solid var(--gray-200);border-radius:12px;" required>
+            </div>
+            <div style="margin-bottom:2rem;">
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;">Notes (Optional)</label>
+                <textarea id="rescheduleNotes" style="width:100%;padding:0.75rem;border:1px solid var(--gray-200);border-radius:12px;height:100px;"></textarea>
+            </div>
+            <div style="display:flex;gap:1rem;">
+                <button type="button" class="btn btn-outline" style="flex:1;" onclick="closeRescheduleModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="flex:1;">Confirm</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Cancel Modal ──────────────────────────────────────── -->
+<div id="cancelModal" class="modal">
+    <div class="modal-content">
+        <h2 style="font-family:var(--font-heading);font-weight:700;color:var(--danger);margin-bottom:1rem;">Cancel Appointment?</h2>
+        <p style="color:var(--gray-500);margin-bottom:2rem;">This action cannot be undone.</p>
+        <textarea id="cancelReason" placeholder="Reason for cancellation..." style="width:100%;padding:0.75rem;border:1px solid var(--gray-200);border-radius:12px;height:80px;margin-bottom:2rem;"></textarea>
+        <div style="display:flex;gap:1rem;">
+            <button class="btn btn-outline" style="flex:1;" onclick="closeCancelModal()">Keep it</button>
+            <button class="btn btn-primary" style="flex:1;background:var(--danger);" onclick="confirmCancel()">Yes, Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- CHAT MODAL                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="chatModal" class="modal">
+    <div class="modal-content chat-modal-content">
+
+        <!-- Chat header -->
+        <div style="background:var(--primary);padding:1.25rem 2rem;color:white;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:1rem;">
+                <div id="chatHeaderAvatar" style="width:44px;height:44px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;overflow:hidden;">Dr</div>
+                <div>
+                    <h3 id="chatDoctorName" style="margin:0;font-size:1.1rem;">Doctor</h3>
+                    <div style="font-size:0.75rem;opacity:0.85;">
+                        <span style="display:inline-block;width:8px;height:8px;background:#10B981;border-radius:50%;margin-right:4px;"></span>Online
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;align-items:center;">
+                <button onclick="startAudioCall()" title="Start Audio Call" style="background:rgba(255,255,255,0.15);border:none;color:white;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:1rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                    <i class="fa-solid fa-phone"></i>
+                </button>
+                <button onclick="startVideoCall()" title="Start Video Call" style="background:rgba(255,255,255,0.15);border:none;color:white;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:1rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                    <i class="fa-solid fa-video"></i>
+                </button>
+                <button onclick="closeChatModal()" style="background:none;border:none;color:white;font-size:1.3rem;cursor:pointer;line-height:1;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages area -->
+        <div id="chatMessages" style="flex:1;overflow-y:auto;padding:1.5rem;background:#F8FAFC;display:flex;flex-direction:column;gap:0.75rem;scroll-behavior:smooth;"></div>
+
+        <!-- Input area -->
+        <div style="padding:1rem 1.25rem;background:white;border-top:1px solid #E2E8F0;flex-shrink:0;">
+            <div style="display:flex;gap:0.75rem;align-items:center;">
+                <input id="chatInput" type="text" placeholder="Write a message…" autocomplete="off"
+                    style="flex:1;padding:0.75rem 1.25rem;border:1px solid #E2E8F0;border-radius:100px;outline:none;background:#F8FAFC;font-size:0.95rem;">
+                <button id="chatSendBtn" style="width:44px;height:44px;border-radius:50%;background:var(--primary);border:none;color:white;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<script>
+// ── Global State ──────────────────────────────────────────────────
+let currentAppointmentId = null;
+let chatAppointmentId    = null;
+let chatUnsubscribe      = null;
+let chatOtherPartyPhoto  = null;  // cached photo of the other person
+let chatMyPhoto          = null;  // cached photo of current user
+
+// ── Tabs ──────────────────────────────────────────────────────────
+function switchTab(event, tabName) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
+// ── Details Modal ─────────────────────────────────────────────────
+function openViewDetailsModal(id) {
+    currentAppointmentId = id;
+    const card = document.querySelector(`[data-appointment-id="${id}"]`);
+    if (card) {
+        const docName = card.querySelector('h3').textContent;
+        const vals    = card.querySelectorAll('.detail-value');
+        document.getElementById('appointmentDetailsContent').innerHTML = `
+            <div style="display:grid;gap:1.25rem;">
+                <div><label style="color:var(--gray-500);font-size:0.78rem;font-weight:700;text-transform:uppercase;">Doctor</label><p style="font-weight:600;margin:0;">${docName}</p></div>
+                <div><label style="color:var(--gray-500);font-size:0.78rem;font-weight:700;text-transform:uppercase;">Date & Time</label><p style="font-weight:600;margin:0;">${vals[0]?.textContent||'N/A'}</p></div>
+                <div><label style="color:var(--gray-500);font-size:0.78rem;font-weight:700;text-transform:uppercase;">Type</label><p style="font-weight:600;margin:0;">${vals[1]?.textContent||'N/A'}</p></div>
+                <div><label style="color:var(--gray-500);font-size:0.78rem;font-weight:700;text-transform:uppercase;">Notes</label><p style="background:var(--gray-100);padding:0.75rem;border-radius:10px;font-size:0.9rem;margin:0;">${vals[2]?.textContent||'None'}</p></div>
+            </div>`;
+    }
+    document.getElementById('detailsModal').classList.add('active');
+}
+function closeDetailsModal()    { document.getElementById('detailsModal').classList.remove('active'); }
+function openRescheduleModal(id){ currentAppointmentId=id; document.getElementById('rescheduleModal').classList.add('active'); }
+function closeRescheduleModal() { document.getElementById('rescheduleModal').classList.remove('active'); }
+function openCancelModal(id)    { currentAppointmentId=id; document.getElementById('cancelModal').classList.add('active'); }
+function closeCancelModal()     { document.getElementById('cancelModal').classList.remove('active'); }
+
+async function confirmCancel() {
+    const reason = document.getElementById('cancelReason').value;
+    const r = await fetch(`/api/appointments/${currentAppointmentId}/cancel/`, {
+        method:'DELETE',
+        headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+        body: JSON.stringify({reason})
+    });
+    if (r.ok) location.reload(); else alert('Error cancelling appointment.');
+}
+
+document.getElementById('rescheduleForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const r = await fetch(`/api/appointments/${currentAppointmentId}/reschedule/`, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+        body: JSON.stringify({
+            appointment_date: new Date(document.getElementById('newDate').value).toISOString(),
+            notes: document.getElementById('rescheduleNotes').value
+        })
+    });
+    if (r.ok) location.reload(); else alert('Error rescheduling.');
+});
+
+// ══════════════════════════════════════════════════════════════════
+// STEP 1 — Open / Close chat modal
+// ══════════════════════════════════════════════════════════════════
+function openChatModal(doctorId, doctorName, appointmentId) {
+    chatAppointmentId = String(appointmentId);
+    chatOtherPartyPhoto = null;
+    chatMyPhoto = null;
+    document.getElementById('chatDoctorName').textContent = doctorName;
+    document.getElementById('chatMessages').innerHTML =
+        '<div style="text-align:center;color:#94A3B8;padding:2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</div>';
+    document.getElementById('chatModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    // Fetch both party photos from Firestore users collection
+    const myUid = firebase.auth().currentUser?.uid || "{{ user.uid }}";
+    Promise.all([
+        db.collection('users').doc(String(doctorId)).get(),
+        db.collection('users').doc(myUid).get()
+    ]).then(([doctorDoc, myDoc]) => {
+        const doctorData = doctorDoc.data() || {};
+        const myData     = myDoc.data() || {};
+        chatOtherPartyPhoto = doctorData.photo_url || null;
+        chatMyPhoto         = myData.photo_url || null;
+
+        // Update header avatar
+        const headerAvatar = document.getElementById('chatHeaderAvatar');
+        if (chatOtherPartyPhoto) {
+            headerAvatar.innerHTML = `<img src="${chatOtherPartyPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
+        } else {
+            headerAvatar.textContent = doctorName.charAt(0).toUpperCase();
+        }
+    }).catch(() => {});
+
+    // Wait for Firebase Auth then subscribe
+    const user = firebase.auth().currentUser;
+    if (user) { subscribeToChat(); return; }
+    const off = firebase.auth().onAuthStateChanged(u => { off(); if (u) subscribeToChat(); });
+}
+
+function closeChatModal() {
+    document.getElementById('chatModal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+    if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// STEP 2 — Subscribe to Firestore messages (real-time)
+// ══════════════════════════════════════════════════════════════════
+function subscribeToChat() {
+    if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; }
+
+    const box = document.getElementById('chatMessages');
+    const ref = db.collection('appointments').doc(chatAppointmentId).collection('messages');
+
+    chatUnsubscribe = ref.onSnapshot(snap => {
+        if (snap.empty) {
+            box.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:2rem;font-size:0.9rem;">No messages yet. Say hello!</div>';
+            return;
+        }
+
+        const msgs = [];
+        snap.forEach(d => msgs.push(d.data()));
+        msgs.sort((a,b) => (a.timestamp?.seconds||0) - (b.timestamp?.seconds||0));
+
+        const myUid = firebase.auth().currentUser?.uid;
+
+        box.innerHTML = '';
+        msgs.forEach(m => {
+            const isMine = m.sender_id === myUid;
+            const photo  = isMine ? chatMyPhoto : chatOtherPartyPhoto;
+            const initials = (m.sender_name || '?').charAt(0).toUpperCase();
+
+            // Format timestamp
+            let timeStr = '';
+            if (m.timestamp?.seconds) {
+                const d = new Date(m.timestamp.seconds * 1000);
+                timeStr = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            }
+
+            const avatarHTML = photo
+                ? `<img src="${photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+                : `<div style="width:32px;height:32px;border-radius:50%;background:${isMine?'rgba(99,102,241,0.2)':'#E2E8F0'};color:${isMine?'var(--primary)':'#475569'};display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;">${initials}</div>`;
+
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = `display:flex;align-items:flex-end;gap:8px;${isMine?'flex-direction:row-reverse;':''}margin-bottom:4px;`;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'msg-bubble ' + (isMine ? 'msg-sent' : 'msg-received');
+            bubble.innerHTML = `
+                <div style="font-size:0.75rem;font-weight:600;opacity:0.7;margin-bottom:3px;">${m.sender_name||''}</div>
+                <div>${m.text || ''}</div>
+                <div style="font-size:0.68rem;opacity:0.6;margin-top:4px;text-align:${isMine?'right':'left'};">${timeStr}</div>`;
+
+            wrapper.innerHTML = avatarHTML;
+            wrapper.appendChild(bubble);
+            box.appendChild(wrapper);
+        });
+        box.scrollTop = box.scrollHeight;
+
+    }, err => {
+        console.error('Chat Firestore error:', err.code, err.message);
+        box.innerHTML = `<div style="text-align:center;color:red;padding:1rem;"><strong>Error: ${err.code}</strong><br><small>Open F12 console for details.</small></div>`;
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// STEP 3 — Send a message
+// ══════════════════════════════════════════════════════════════════
+async function sendMessage() {
+    const inp = document.getElementById('chatInput');
+    const txt = inp.value.trim();
+    if (!txt || !chatAppointmentId) return;
+
+    const myUid = firebase.auth().currentUser?.uid;
+    if (!myUid) { alert('Not signed in – please refresh the page.'); return; }
+
+    inp.value = '';
+    try {
+        await db.collection('appointments').doc(chatAppointmentId).collection('messages').add({
+            text:        txt,
+            sender_id:   myUid,
+            sender_name: "{{ user.first_name }} {{ user.last_name }}",
+            type:        'text',
+            timestamp:   firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch(e) {
+        console.error('Send failed:', e);
+        inp.value = txt; // restore text so user doesn't lose it
+        alert('Send failed: ' + e.message);
+    }
+}
+
+document.getElementById('chatSendBtn').addEventListener('click', sendMessage);
+document.getElementById('chatInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// ══════════════════════════════════════════════════════════════════
+// STEP 4 — Start video / audio call
+// ══════════════════════════════════════════════════════════════════
+function startVideoCall() {
+    if (!chatAppointmentId) return;
+    window.location.href = `/video-call/${chatAppointmentId}/`;
+}
+
+function startAudioCall() {
+    if (!chatAppointmentId) return;
+    window.location.href = `/video-call/${chatAppointmentId}/?audio=1`;
+}
+
+// Close modal when clicking backdrop
+window.addEventListener('click', e => {
+    if (e.target.id === 'chatModal') closeChatModal();
+});
+</script>
+
+{% endblock %}

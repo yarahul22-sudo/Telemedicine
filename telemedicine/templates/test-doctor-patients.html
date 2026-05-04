@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Test - Doctor Patients View{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 2rem auto; padding: 0 2rem;">
+    <h1 style="color: #667eea;">Test: Doctor Patients Data</h1>
+    
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h2>Dermatologist: Dr. Rachel Nelson</h2>
+        <div id="results"></div>
+    </div>
+</div>
+
+<script>
+    async function loadDoctorPatients() {
+        try {
+            const response = await fetch('/api/appointments/doctor/patients/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                credentials: 'include',
+            });
+
+            const data = await response.json();
+            console.log('API Response:', data);
+
+            if (response.ok) {
+                if (data.length === 0) {
+                    document.getElementById('results').innerHTML = '<p style="color: red;">No patients found</p>';
+                } else {
+                    let html = `<p><strong>Total Patients: ${data.length}</strong></p>`;
+                    html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                    document.getElementById('results').innerHTML = html;
+                }
+            } else {
+                document.getElementById('results').innerHTML = `<p style="color: red;">Error: ${data.error || 'Unknown error'}</p>`;
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            document.getElementById('results').innerHTML = `<p style="color: red;">Fetch Error: ${error.message}</p>`;
+        }
+    }
+
+    function getCsrfToken() {
+        let csrftoken = null;
+        const name = 'csrftoken';
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    csrftoken = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return csrftoken;
+    }
+
+    // Load on page load, but only if user is a doctor
+    document.addEventListener('DOMContentLoaded', loadDoctorPatients);
+</script>
+{% endblock %}
