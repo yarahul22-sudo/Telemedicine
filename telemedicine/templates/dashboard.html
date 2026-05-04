@@ -1,276 +1,822 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Telemedicine Platform{% endblock %}
+{% block title %}Dashboard — TeleMed{% endblock %}
 
 {% block extra_css %}
-    <style>
-        .dashboard-header {
-            margin-bottom: 2rem;
-        }
+<style>
+    /* =====================
+       DASHBOARD LAYOUT
+    ===================== */
+    .dash-wrapper {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 2rem;
+        align-items: start;
+        padding: 2.5rem 0;
+    }
 
-        .dashboard-header h1 {
-            color: #333;
-            margin-bottom: 0.5rem;
-        }
+    /* =====================
+       SIDEBAR
+    ===================== */
+    .dash-sidebar {
+        position: sticky;
+        top: 100px;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
 
-        .dashboard-header p {
-            color: #666;
-            font-size: 1.1rem;
-        }
+    .profile-card {
+        background: white;
+        border-radius: 24px;
+        padding: 2rem;
+        text-align: center;
+        border: 1px solid #F3F4F6;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    }
 
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin: 2rem 0;
-        }
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4F46E5, #818CF8);
+        color: white;
+        font-size: 2rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-family: 'Outfit', sans-serif;
+    }
 
-        .dashboard-card {
-            background: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+    .profile-name {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1F2937;
+        margin-bottom: 0.25rem;
+    }
 
-        .dashboard-card h3 {
-            color: #667eea;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+    .profile-role {
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 0.3rem 0.85rem;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 1.25rem;
+    }
 
-        .dashboard-card .icon {
-            font-size: 1.5rem;
-        }
+    .role-patient { background: #EEF2FF; color: #4F46E5; }
+    .role-doctor  { background: #F0FDF4; color: #16A34A; }
+    .role-admin   { background: #FEF3C7; color: #D97706; }
 
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 0.5rem;
-        }
+    .profile-meta {
+        font-size: 0.85rem;
+        color: #6B7280;
+        text-align: left;
+        border-top: 1px solid #F3F4F6;
+        padding-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
 
-        .stat-label {
-            color: #999;
-            font-size: 0.9rem;
-        }
+    .profile-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
 
-        .quick-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
+    .sidebar-nav {
+        background: white;
+        border-radius: 20px;
+        padding: 1rem;
+        border: 1px solid #F3F4F6;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
 
-        .quick-actions .btn {
-            width: 100%;
-            text-align: center;
-            padding: 1rem;
-        }
+    .sidebar-nav a {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        color: #4B5563;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
 
-        .recent-section {
-            background: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-top: 2rem;
-        }
+    .sidebar-nav a:hover {
+        background: rgba(79, 70, 229, 0.06);
+        color: #4F46E5;
+    }
 
-        .recent-section h3 {
-            color: #667eea;
-            margin-bottom: 1rem;
-        }
+    .sidebar-nav a.active {
+        background: rgba(79, 70, 229, 0.1);
+        color: #4F46E5;
+        font-weight: 600;
+    }
 
-        .empty-state {
-            text-align: center;
-            padding: 2rem;
-            color: #999;
-        }
+    .sidebar-nav a i {
+        width: 20px;
+        text-align: center;
+        font-size: 0.95rem;
+    }
 
-        .empty-state-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
+    /* =====================
+       MAIN CONTENT
+    ===================== */
+    .dash-main {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
+    /* Welcome Banner */
+    .dash-welcome {
+        background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+        border-radius: 24px;
+        padding: 2.5rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
 
-        table th {
-            background-color: #f8f9fa;
-            padding: 0.75rem;
-            text-align: left;
-            color: #333;
-            font-weight: 600;
-            border-bottom: 2px solid #dee2e6;
-        }
+    .dash-welcome::after {
+        content: '';
+        position: absolute;
+        right: -60px;
+        top: -60px;
+        width: 250px;
+        height: 250px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 50%;
+    }
 
-        table td {
-            padding: 0.75rem;
-            border-bottom: 1px solid #dee2e6;
-        }
+    .dash-welcome h1 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.85rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
 
-        table tr:hover {
-            background-color: #f8f9fa;
-        }
+    .dash-welcome p {
+        opacity: 0.85;
+        font-size: 1rem;
+    }
 
-        .profile-info {
-            background: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-top: 2rem;
-        }
+    /* Approval Alert */
+    .approval-alert {
+        background: #FFFBEB;
+        border: 1px solid #FDE68A;
+        border-left: 4px solid #F59E0B;
+        border-radius: 16px;
+        padding: 1.5rem 2rem;
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+    }
 
-        .profile-info h3 {
-            color: #667eea;
-            margin-bottom: 1rem;
-        }
+    .approval-alert i {
+        color: #D97706;
+        font-size: 1.25rem;
+        margin-top: 2px;
+    }
 
-        .info-item {
-            display: grid;
-            grid-template-columns: 150px 1fr;
-            gap: 1rem;
-            margin-bottom: 0.75rem;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid #eee;
-        }
+    .approval-alert h4 { color: #92400E; margin-bottom: 0.4rem; font-size: 1rem; }
+    .approval-alert p { color: #78350F; font-size: 0.9rem; margin: 0; }
 
-        .info-item:last-child {
-            border-bottom: none;
-        }
+    /* Stat Cards */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.25rem;
+    }
 
-        .info-label {
-            font-weight: 600;
-            color: #667eea;
-        }
+    .stat-card {
+        background: white;
+        border-radius: 20px;
+        padding: 1.75rem;
+        border: 1px solid #F3F4F6;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        transition: all 0.3s ease;
+    }
 
-        .info-value {
-            color: #333;
-        }
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+    }
 
-        .edit-profile-btn {
-            margin-top: 1rem;
-        }
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
 
-        @media (max-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
+    .icon-indigo { background: #EEF2FF; color: #4F46E5; }
+    .icon-green  { background: #F0FDF4; color: #16A34A; }
+    .icon-amber  { background: #FFFBEB; color: #D97706; }
+    .icon-rose   { background: #FFF1F2; color: #E11D48; }
 
-            .quick-actions {
-                grid-template-columns: 1fr;
-            }
+    .stat-info .value {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.9rem;
+        font-weight: 800;
+        color: #1F2937;
+        line-height: 1;
+        margin-bottom: 0.3rem;
+    }
 
-            .info-item {
-                grid-template-columns: 1fr;
-                gap: 0.25rem;
-            }
+    .stat-info .label {
+        font-size: 0.82rem;
+        color: #9CA3AF;
+        font-weight: 500;
+    }
 
-            table {
-                font-size: 0.9rem;
-            }
+    /* Panel / Card */
+    .dash-panel {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid #F3F4F6;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
 
-            table th,
-            table td {
-                padding: 0.5rem;
-            }
-        }
-    </style>
+    .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid #F3F4F6;
+    }
+
+    .panel-header h3 {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1F2937;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .panel-header h3 i {
+        color: #4F46E5;
+    }
+
+    .panel-header a {
+        font-size: 0.85rem;
+        color: #4F46E5;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .panel-body {
+        padding: 0;
+    }
+
+    /* Table */
+    .dash-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .dash-table thead th {
+        background: #F9FAFB;
+        padding: 0.85rem 1.5rem;
+        text-align: left;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #F3F4F6;
+    }
+
+    .dash-table tbody tr {
+        border-bottom: 1px solid #F9FAFB;
+        transition: background 0.15s;
+    }
+
+    .dash-table tbody tr:last-child { border-bottom: none; }
+
+    .dash-table tbody tr:hover { background: #FAFAFA; }
+
+    .dash-table td {
+        padding: 1rem 1.5rem;
+        font-size: 0.9rem;
+        color: #374151;
+    }
+
+    /* Status Badges */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .badge-scheduled { background: #EEF2FF; color: #4F46E5; }
+    .badge-completed  { background: #F0FDF4; color: #16A34A; }
+    .badge-cancelled  { background: #FFF1F2; color: #E11D48; }
+    .badge-pending    { background: #FFFBEB; color: #D97706; }
+    .badge-active     { background: #F0FDF4; color: #16A34A; }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #9CA3AF;
+    }
+
+    .empty-state i {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        opacity: 0.4;
+        display: block;
+    }
+
+    .empty-state p {
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Action Link */
+    .action-link {
+        color: #4F46E5;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        transition: gap 0.2s;
+    }
+
+    .action-link:hover { gap: 0.5rem; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+        .dash-wrapper { grid-template-columns: 1fr; }
+        .dash-sidebar { position: static; }
+        .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 600px) {
+        .stat-grid { grid-template-columns: 1fr; }
+        .dash-table thead { display: none; }
+        .dash-table td { display: block; padding: 0.5rem 1rem; }
+        .dash-table tr { border-bottom: 2px solid #F3F4F6; }
+        .dash-welcome { padding: 1.75rem; }
+        .dash-welcome h1 { font-size: 1.4rem; }
+    }
+
+    /* Incoming Call Modal */
+    .call-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(15, 23, 42, 0.9);
+        backdrop-filter: blur(12px);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .call-card {
+        background: white;
+        padding: 3rem;
+        border-radius: 32px;
+        text-align: center;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        animation: callBounce 0.5s infinite alternate;
+    }
+
+    @keyframes callBounce {
+        from { transform: scale(1); }
+        to { transform: scale(1.05); }
+    }
+
+    .caller-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        color: white;
+        font-size: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        border: 4px solid #EEF2FF;
+    }
+
+    .call-actions {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+
+    .btn-accept {
+        width: 64px; height: 64px; border-radius: 50%;
+        background: #10B981; color: white; border: none;
+        font-size: 1.5rem; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-decline {
+        width: 64px; height: 64px; border-radius: 50%;
+        background: #EF4444; color: white; border: none;
+        font-size: 1.5rem; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-    <div class="dashboard-header">
-        <h1>Welcome, {{ user.first_name }}! 👋</h1>
-        <p>Manage your healthcare and appointments</p>
-    </div>
+<div class="dash-wrapper">
 
-    <!-- Quick Stats -->
-    <div class="dashboard-grid">
-        <div class="dashboard-card">
-            <h3><span class="icon">📅</span> Upcoming Appointments</h3>
-            <div class="stat-value">2</div>
-            <div class="stat-label">Scheduled for this week</div>
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="dash-sidebar">
+        <!-- Profile Card -->
+        <div class="profile-card">
+            {% if user.profile_image_url %}
+                <img src="{{ user.profile_image_url }}" alt="{{ user.first_name }}"
+                     style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 14px rgba(79,70,229,0.2); margin: 0 auto 1rem; display: block;"
+                     onerror="this.style.display='none'; document.getElementById('fallback-avatar').style.display='flex';">
+                <div id="fallback-avatar" class="profile-avatar" style="display: none;">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+            {% else %}
+                <div class="profile-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+            {% endif %}
+            <div class="profile-name">{{ user.first_name }} {{ user.last_name }}</div>
+            <span class="profile-role role-{{ user.role }}">{{ user.role|title }}</span>
+            <div class="profile-meta">
+                <span><i class="fa-regular fa-envelope" style="color:#4F46E5;"></i> {{ user.email }}</span>
+                <span><i class="fa-regular fa-calendar" style="color:#4F46E5;"></i> Since {{ user.date_joined|date:"M Y" }}</span>
+            </div>
         </div>
-        <div class="dashboard-card">
-            <h3><span class="icon">👨‍⚕️</span> Your Doctors</h3>
-            <div class="stat-value">1</div>
-            <div class="stat-label">Active healthcare provider</div>
-        </div>
-        <div class="dashboard-card">
-            <h3><span class="icon">📝</span> Medical Records</h3>
-            <div class="stat-value">5</div>
-            <div class="stat-label">Documents on file</div>
-        </div>
-        <div class="dashboard-card">
-            <h3><span class="icon">💬</span> Messages</h3>
-            <div class="stat-value">1</div>
-            <div class="stat-label">Unread messages</div>
-        </div>
-    </div>
 
-    <!-- Quick Actions -->
-    <div class="dashboard-card">
-        <h3>Quick Actions</h3>
-        <div class="quick-actions">
-            <a href="/find-doctor/" class="btn" style="background: #667eea; color: white; padding: 1rem; border-radius: 4px; text-decoration: none; text-align: center; font-weight: bold;">🏥 Find Doctor</a>
-            <a href="/consultations/" class="btn btn-secondary">📞 Start Consultation</a>
-            <a href="/medical-records/" class="btn btn-secondary">📋 View Records</a>
-            <a href="/profile/edit/" class="btn btn-secondary">👤 Edit Profile</a>
-        </div>
-    </div>
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar-nav">
+            <a href="/dashboard/" class="active"><i class="fa-solid fa-grid-2"></i> Overview</a>
+            {% if user.role == 'patient' %}
+                <a href="/find-doctor/"><i class="fa-solid fa-magnifying-glass"></i> Find Doctor</a>
+                <a href="/my-appointments/"><i class="fa-solid fa-calendar-days"></i> Appointments</a>
+            {% else %}
+                <a href="/doctor-appointments/"><i class="fa-solid fa-clipboard-list"></i> Appointments</a>
+                <a href="/doctor-patients/"><i class="fa-solid fa-users"></i> My Patients</a>
+            {% endif %}
+            <a href="/profile/edit/"><i class="fa-solid fa-user-pen"></i> Edit Profile</a>
+        </nav>
+    </aside>
 
-    <!-- Upcoming Appointments -->
-    <div class="recent-section">
-        <h3>📅 Your Upcoming Appointments</h3>
-        <div class="empty-state">
-            <div class="empty-state-icon">📭</div>
-            <p>No upcoming appointments. <a href="/appointments/book/" style="color: #667eea;">Book one now</a></p>
-        </div>
-    </div>
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="dash-main">
 
-    <!-- Recent Activity -->
-    <div class="recent-section">
-        <h3>🔔 Recent Activity</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Activity</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>March 21, 2026</td>
-                    <td>Account created</td>
-                    <td><span style="color: #28a745;">✓ Completed</span></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <!-- Welcome Banner -->
+        <div class="dash-welcome">
+            <h1>Good to see you, {{ user.first_name }}! 👋</h1>
+            <p>Here's an overview of your healthcare activity today.</p>
+        </div>
 
-    <!-- Profile Information -->
-    <div class="profile-info">
-        <h3>👤 Your Profile</h3>
-        <div class="info-item">
-            <div class="info-label">Name:</div>
-            <div class="info-value">{{ user.first_name }} {{ user.last_name }}</div>
+        <!-- Pending Approval Alert (Doctor Only) -->
+        {% if user.role == 'doctor' and not is_doctor_approved %}
+        <div class="approval-alert">
+            <i class="fa-solid fa-hourglass-half"></i>
+            <div>
+                <h4>Account Pending Approval</h4>
+                <p>Your doctor account is under review by an administrator. Once approved, you'll start appearing in patient searches and can accept appointments.</p>
+            </div>
         </div>
-        <div class="info-item">
-            <div class="info-label">Email:</div>
-            <div class="info-value">{{ user.email }}</div>
+        {% endif %}
+
+        <!-- Stats Row -->
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-icon icon-indigo"><i class="fa-solid fa-calendar-check"></i></div>
+                <div class="stat-info">
+                    <div class="value" id="statUpcoming">{{ upcoming_appointments|length }}</div>
+                    <div class="label">Upcoming Appointments</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon icon-green"><i class="fa-solid fa-circle-check"></i></div>
+                <div class="stat-info">
+                    <div class="value" id="statCompleted">{{ recent_consultations|length }}</div>
+                    <div class="label">Completed Consultations</div>
+                </div>
+            </div>
+            {% if user.role == 'patient' and active_prescriptions %}
+            <div class="stat-card">
+                <div class="stat-icon icon-amber"><i class="fa-solid fa-pills"></i></div>
+                <div class="stat-info">
+                    <div class="value">{{ active_prescriptions|length }}</div>
+                    <div class="label">Active Prescriptions</div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="stat-card">
+                <div class="stat-icon icon-rose"><i class="fa-solid fa-bell"></i></div>
+                <div class="stat-info">
+                    <div class="value" id="statNotifications">0</div>
+                    <div class="label" id="labelNotifications">Notifications</div>
+                </div>
+            </div>
         </div>
-        <div class="info-item">
-            <div class="info-label">Role:</div>
-            <div class="info-value">{{ user.role|title }}</div>
+
+        <!-- Upcoming Appointments Table -->
+        <div class="dash-panel">
+            <div class="panel-header">
+                <h3><i class="fa-solid fa-calendar-days"></i> Upcoming Appointments</h3>
+                <a href="{% if user.role == 'patient' %}/my-appointments/{% else %}/doctor-appointments/{% endif %}">View all →</a>
+            </div>
+            <div class="panel-body" id="upcomingContainer">
+                {% if upcoming_appointments %}
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>{% if user.role == 'patient' %}Doctor{% else %}Patient{% endif %}</th>
+                            <th>Condition</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="upcomingTableBody">
+                        {% for appt in upcoming_appointments %}
+                        <tr>
+                            <td>
+                                <div style="font-weight:600; color:#1F2937;">{{ appt.appointment_date|date:"M d, Y" }}</div>
+                                <div style="font-size:0.8rem; color:#9CA3AF;">{{ appt.appointment_date|date:"H:i" }}</div>
+                            </td>
+                            <td>{% if user.role == 'patient' %}{{ appt.doctor_name }}{% else %}{{ appt.patient_name }}{% endif %}</td>
+                            <td>{{ appt.disease_name|default:"General" }}</td>
+                            <td><span class="badge badge-{{ appt.status }}">{{ appt.status|title }}</span></td>
+                            <td><a href="/my-appointments/" class="action-link">Manage <i class="fa-solid fa-arrow-right"></i></a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fa-solid fa-calendar-xmark"></i>
+                    <p>No upcoming appointments scheduled.</p>
+                    {% if user.role == 'patient' %}
+                    <a href="/find-doctor/" class="btn btn-primary" style="display:inline-flex; padding: 0.6rem 1.5rem;">
+                        <i class="fa-solid fa-magnifying-glass"></i> Find a Doctor
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
         </div>
-        <div class="info-item">
-            <div class="info-label">Member Since:</div>
-            <div class="info-value">{{ user.date_joined|date:"F d, Y" }}</div>
+
+        <!-- Recent Consultations -->
+        <div class="dash-panel">
+            <div class="panel-header">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Consultations</h3>
+            </div>
+            <div class="panel-body" id="recentContainer">
+                {% if recent_consultations %}
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>{% if user.role == 'patient' %}Doctor{% else %}Patient{% endif %}</th>
+                            <th>Condition</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentTableBody">
+                        {% for c in recent_consultations %}
+                        <tr>
+                            <td>
+                                <div style="font-weight:600; color:#1F2937;">{{ c.appointment_date|date:"M d, Y" }}</div>
+                                <div style="font-size:0.8rem; color:#9CA3AF;">{{ c.appointment_date|date:"H:i" }}</div>
+                            </td>
+                            <td>{% if user.role == 'patient' %}{{ c.doctor_name }}{% else %}{{ c.patient_name }}{% endif %}</td>
+                            <td>{{ c.disease_name|default:"General" }}</td>
+                            <td style="color:#6B7280;">{{ c.consultation_type|default:"Video Call" }}</td>
+                            <td><span class="badge badge-completed">{{ c.status|title }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    <p>No completed consultations yet.</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        <a href="/profile/edit/" class="btn edit-profile-btn">Edit Profile</a>
+
+        <!-- Active Prescriptions (Patient Only) -->
+        {% if user.role == 'patient' and active_prescriptions %}
+        <div class="dash-panel">
+            <div class="panel-header">
+                <h3><i class="fa-solid fa-pills"></i> Active Prescriptions</h3>
+            </div>
+            <div class="panel-body">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Medication</th>
+                            <th>Dosage</th>
+                            <th>Frequency</th>
+                            <th>Prescribed By</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rx in active_prescriptions %}
+                        <tr>
+                            <td style="font-weight:600;">{{ rx.medication_name }}</td>
+                            <td>{{ rx.dosage }}</td>
+                            <td>{{ rx.frequency }}</td>
+                            <td>{{ rx.doctor_name }}</td>
+                            <td>{{ rx.issued_at|date:"M d, Y" }}</td>
+                            <td><span class="badge badge-active">{{ rx.status|title }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+    </main>
+</div>
+
+<!-- Incoming Call Overlay -->
+<div id="incomingCallOverlay" class="call-overlay">
+    <div class="call-card">
+        <div class="caller-avatar" id="callerAvatar">?</div>
+        <h2 id="callerName" style="color: #1E293B; margin-bottom: 0.5rem;">Incoming Call</h2>
+        <p style="color: #64748B;">Would you like to join the consultation now?</p>
+        
+        <div class="call-actions">
+            <button id="btnAcceptCall" class="btn-accept" title="Accept Call">
+                <i class="fa-solid fa-phone"></i>
+            </button>
+            <button id="btnDeclineCall" class="btn-decline" title="Decline">
+                <i class="fa-solid fa-phone-slash"></i>
+            </button>
+        </div>
+        <audio id="ringtone" src="https://assets.mixkit.co/sfx/preview/mixkit-outgoing-call-signal-2187.mp3" loop></audio>
     </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const uid = "{{ user.uid }}";
+        const role = "{{ user.role }}";
+        const roleKey = role === 'doctor' ? 'doctor_id' : 'patient_id';
+
+        // Real-time appointment listener
+        db.collection('appointments').where(roleKey, '==', uid)
+            .onSnapshot((snapshot) => {
+                const appointments = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    data.id = doc.id;
+                    if (data.appointment_date && data.appointment_date.toDate) {
+                        data.appointment_date = data.appointment_date.toDate();
+                    } else if (typeof data.appointment_date === 'string') {
+                        data.appointment_date = new Date(data.appointment_date);
+                    }
+                    appointments.push(data);
+                });
+                updateDashboardUI(appointments);
+                checkActiveCalls(appointments);
+            }, err => console.error("Firestore error:", err));
+
+        function checkActiveCalls(appointments) {
+            const activeCall = appointments.find(a => a.call_active === true && a.status === 'scheduled');
+            const overlay = document.getElementById('incomingCallOverlay');
+            const ringtone = document.getElementById('ringtone');
+
+            if (activeCall) {
+                // If the user is NOT the one who started the call (simplification: doctors start calls)
+                // In a real app, you'd check 'caller_id'
+                document.getElementById('callerName').textContent = role === 'patient' ? activeCall.doctor_name : activeCall.patient_name;
+                document.getElementById('callerAvatar').textContent = (role === 'patient' ? activeCall.doctor_name : activeCall.patient_name).charAt(0);
+                
+                overlay.style.display = 'flex';
+                try { ringtone.play(); } catch(e) {}
+
+                document.getElementById('btnAcceptCall').onclick = () => {
+                    window.location.href = `/video-call/${activeCall.id}/`;
+                };
+
+                document.getElementById('btnDeclineCall').onclick = () => {
+                    db.collection('appointments').document(activeCall.id).update({ call_active: false });
+                    overlay.style.display = 'none';
+                    ringtone.pause();
+                };
+            } else {
+                overlay.style.display = 'none';
+                if(ringtone) ringtone.pause();
+            }
+        }
+
+        // Notification listener
+        db.collection('notifications').where('uid', '==', uid).where('read', '==', false)
+            .onSnapshot((snapshot) => updateNotificationUI(snapshot.size));
+
+        function statusBadgeClass(status) {
+            const map = { scheduled: 'badge-scheduled', completed: 'badge-completed', cancelled: 'badge-cancelled', pending: 'badge-pending' };
+            return map[status] || 'badge-pending';
+        }
+
+        function formatDate(d) {
+            return new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function updateDashboardUI(appointments) {
+            const now = new Date();
+            const upcoming = appointments.filter(a => a.status === 'scheduled' && new Date(a.appointment_date) >= now)
+                .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date));
+            const completed = appointments.filter(a => a.status === 'completed')
+                .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+
+            document.getElementById('statUpcoming').textContent = upcoming.length;
+            document.getElementById('statCompleted').textContent = completed.length;
+
+            const upcomingEl = document.getElementById('upcomingContainer');
+            if (upcoming.length > 0) {
+                let rows = upcoming.slice(0, 5).map(a => {
+                    const name = role === 'patient' ? (a.doctor_name || 'Doctor') : (a.patient_name || 'Patient');
+                    const d = new Date(a.appointment_date);
+                    return `<tr>
+                        <td><div style="font-weight:600;color:#1F2937;">${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div><div style="font-size:0.8rem;color:#9CA3AF;">${d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</div></td>
+                        <td>${name}</td>
+                        <td>${a.disease_name || 'General'}</td>
+                        <td><span class="badge ${statusBadgeClass(a.status)}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span></td>
+                        <td><a href="/my-appointments/" class="action-link">Manage <i class="fa-solid fa-arrow-right"></i></a></td>
+                    </tr>`;
+                }).join('');
+                upcomingEl.innerHTML = `<table class="dash-table"><thead><tr><th>Date & Time</th><th>${role==='patient'?'Doctor':'Patient'}</th><th>Condition</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+            } else {
+                upcomingEl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-calendar-xmark"></i><p>No upcoming appointments.</p>${role==='patient'?'<a href="/find-doctor/" class="btn btn-primary" style="display:inline-flex;padding:0.6rem 1.5rem;"><i class="fa-solid fa-magnifying-glass"></i> Find a Doctor</a>':''}</div>`;
+            }
+
+            const recentEl = document.getElementById('recentContainer');
+            if (completed.length > 0) {
+                let rows = completed.slice(0, 5).map(a => {
+                    const name = role === 'patient' ? (a.doctor_name || 'Doctor') : (a.patient_name || 'Patient');
+                    const d = new Date(a.appointment_date);
+                    return `<tr>
+                        <td><div style="font-weight:600;color:#1F2937;">${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div></td>
+                        <td>${name}</td>
+                        <td>${a.disease_name || 'General'}</td>
+                        <td style="color:#6B7280;">${a.consultation_type || 'Video Call'}</td>
+                        <td><span class="badge badge-completed">Completed</span></td>
+                    </tr>`;
+                }).join('');
+                recentEl.innerHTML = `<table class="dash-table"><thead><tr><th>Date</th><th>${role==='patient'?'Doctor':'Patient'}</th><th>Condition</th><th>Type</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+            } else {
+                recentEl.innerHTML = `<div class="empty-state"><i class="fa-solid fa-clipboard-list"></i><p>No completed consultations yet.</p></div>`;
+            }
+        }
+
+        function updateNotificationUI(count) {
+            const val = document.getElementById('statNotifications');
+            const lbl = document.getElementById('labelNotifications');
+            const badge = document.getElementById('navBadge');
+            if (val) val.textContent = count;
+            if (lbl) lbl.textContent = count > 0 ? `${count} new alert${count > 1 ? 's' : ''}` : 'Notifications';
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'block' : 'none';
+            }
+        }
+    });
+</script>
 {% endblock %}

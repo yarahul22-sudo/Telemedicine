@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+
+{% block title %}Change Role - Telemedicine Platform{% endblock %}
+
+{% block extra_css %}
+    <style>
+        .change-role-container {
+            max-width: 700px;
+            margin: 3rem auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .change-role-container h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .change-role-container > p {
+            text-align: center;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .role-selection {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .role-option {
+            position: relative;
+        }
+
+        .role-option input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .role-option label {
+            display: block;
+            padding: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0;
+            font-weight: normal;
+        }
+
+        .role-option input:checked + label {
+            border-color: #667eea;
+            background-color: rgba(102, 126, 234, 0.05);
+        }
+
+        .doctor-fields {
+            background: #f0f4ff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+
+        .doctor-fields.show {
+            display: block;
+        }
+
+        .doctor-fields h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .available-days {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .available-days label {
+            display: flex;
+            align-items: center;
+            margin: 0;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .available-days input {
+            width: auto;
+            margin-right: 0.5rem;
+            cursor: pointer;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-actions button,
+        .form-actions a {
+            flex: 1;
+            text-align: center;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #ffc107;
+        }
+
+        .current-role {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #28a745;
+        }
+
+        @media (max-width: 600px) {
+            .change-role-container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .role-selection {
+                grid-template-columns: 1fr;
+            }
+
+            .available-days {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="change-role-container">
+        <h1>Change Your Role</h1>
+        <p>Switch between patient and doctor accounts</p>
+
+        {% if messages %}
+            <div style="margin-bottom: 1.5rem;">
+                {% for message in messages %}
+                    <div class="alert {% if 'error' in message.tags %}alert-error{% else %}alert-success{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="current-role">
+            <strong>Current Role:</strong> {{ user.get_role_display }}
+        </div>
+
+        <div class="warning-box">
+            <i class="fa-solid fa-triangle-exclamation"></i> <strong>Note:</strong> If you have active appointments, you won't be able to change your role. Please cancel all appointments first.
+        </div>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label>Switch to:</label>
+                <div class="role-selection">
+                    <div class="role-option">
+                        <input 
+                            type="radio" 
+                            id="patient" 
+                            name="new_role" 
+                            value="patient"
+                            required
+                            onchange="toggleDoctorFields()"
+                            {% if user.role == 'patient' %}disabled{% endif %}
+                        >
+                        <label for="patient"><i class="fa-solid fa-user"></i> Patient</label>
+                    </div>
+                    <div class="role-option">
+                        <input 
+                            type="radio" 
+                            id="doctor" 
+                            name="new_role" 
+                            value="doctor"
+                            required
+                            onchange="toggleDoctorFields()"
+                            {% if user.role == 'doctor' %}disabled{% endif %}
+                        >
+                        <label for="doctor"><i class="fa-solid fa-user-doctor"></i> Doctor</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Doctor-specific fields (hidden by default) -->
+            <div id="doctorFields" class="doctor-fields">
+                <h3>Professional Information</h3>
+                
+                <div class="form-group">
+                    <label for="specialization">Medical Specialization *</label>
+                    <select id="specialization" name="specialization">
+                        <option value="">Select Your Specialization</option>
+                        <option value="cardiology">Cardiology</option>
+                        <option value="neurology">Neurology</option>
+                        <option value="orthopedics">Orthopedics</option>
+                        <option value="dermatology">Dermatology</option>
+                        <option value="gynecology">Gynecology</option>
+                        <option value="psychiatry">Psychiatry</option>
+                        <option value="pediatrics">Pediatrics</option>
+                        <option value="general">General Practitioner</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="license_number">Medical License Number *</label>
+                    <input 
+                        type="text" 
+                        id="license_number" 
+                        name="license_number" 
+                        placeholder="e.g., DL12345"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="experience_years">Years of Experience *</label>
+                        <input 
+                            type="number" 
+                            id="experience_years" 
+                            name="experience_years" 
+                            placeholder="0"
+                            min="0"
+                            max="60"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="qualification">Medical Qualification *</label>
+                        <input 
+                            type="text" 
+                            id="qualification" 
+                            name="qualification" 
+                            placeholder="e.g., MD, MBBS"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Available Days *</label>
+                    <div class="available-days">
+                        <label>
+                            <input type="checkbox" name="available_days" value="Monday"> Monday
+                        </label>
+                        <label>
+                            <input type="checkbox" name="available_days" value="Tuesday"> Tuesday
+                        </label>
+                        <label>
+                            <input type="checkbox" name="available_days" value="Wednesday"> Wednesday
+                        </label>
+                        <label>
+                            <input type="checkbox" name="available_days" value="Thursday"> Thursday
+                        </label>
+                        <label>
+                            <input type="checkbox" name="available_days" value="Friday"> Friday
+                        </label>
+                        <label>
+                            <input type="checkbox" name="available_days" value="Saturday"> Saturday
+                        </label>
+                        <label>
+                            <input type="checkbox" name="available_days" value="Sunday"> Sunday
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn">Change Role</button>
+                <a href="/dashboard/" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function toggleDoctorFields() {
+            const newRole = document.querySelector('input[name="new_role"]:checked');
+            if (!newRole) return;
+            
+            const role = newRole.value;
+            const doctorFields = document.getElementById('doctorFields');
+            
+            if (role === 'doctor') {
+                doctorFields.classList.add('show');
+            } else {
+                doctorFields.classList.remove('show');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleDoctorFields();
+        });
+    </script>
+{% endblock %}

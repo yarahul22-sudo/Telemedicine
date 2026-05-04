@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Doctor Dashboard | TeleMed{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 4rem 2rem; border-radius: 24px; color: white; margin-bottom: 3rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+    .stat-card { background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.3); }
+    .stat-value { font-size: 2rem; font-weight: 700; }
+    .stat-label { font-size: 0.85rem; opacity: 0.9; text-transform: uppercase; }
+
+    .tabs-nav { display: flex; gap: 1rem; margin-bottom: 2rem; background: white; padding: 0.5rem; border-radius: 16px; box-shadow: var(--shadow-sm); }
+    .tab-btn { padding: 0.75rem 1.5rem; border: none; background: none; border-radius: 12px; cursor: pointer; font-weight: 600; color: var(--gray-500); transition: 0.2s; }
+    .tab-btn.active { background: var(--secondary); color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+
+    .appointment-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 1.5rem; }
+    .appointment-card { background: white; border-radius: 20px; padding: 1.5rem; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .patient-info { display: flex; align-items: center; gap: 1rem; }
+    .patient-avatar { width: 48px; height: 48px; background: #D1FAE5; color: #065F46; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+    .detail-row { display: flex; gap: 1rem; margin-bottom: 1rem; font-size: 0.95rem; color: var(--gray-500); }
+    .detail-row i { color: var(--secondary); width: 16px; }
+    .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1.5rem; }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.6); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; border-radius: 24px; width: 90%; max-width: 600px; padding: 2.5rem; }
+
+    /* Chat bubbles */
+    .msg-bubble   { max-width: 78%; padding: 0.7rem 1rem; border-radius: 18px; font-size: 0.93rem; line-height: 1.45; word-break: break-word; }
+    .msg-sent     { align-self: flex-end;  background: var(--secondary); color: white; border-bottom-right-radius: 4px; }
+    .msg-received { align-self: flex-start; background: white; color: #1E293B; border-bottom-left-radius: 4px; border: 1px solid #E2E8F0; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    #chatMessages::-webkit-scrollbar       { width: 5px; }
+    #chatMessages::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Header ──────────────────────────────────────────────── -->
+<div class="dashboard-header">
+    <h1 style="font-family:var(--font-heading);">Welcome, Dr. {{ user.last_name }}</h1>
+    <p style="opacity:0.9;">Manage your consultations and patient prescriptions</p>
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value">{{ upcoming_appointments|length }}</div><div class="stat-label">Upcoming</div></div>
+        <div class="stat-card"><div class="stat-value">{{ completed_appointments|length }}</div><div class="stat-label">Completed</div></div>
+        <div class="stat-card"><div class="stat-value">{{ total_appointments }}</div><div class="stat-label">Total Patients</div></div>
+    </div>
+</div>
+
+<!-- ── Tabs ───────────────────────────────────────────────── -->
+<div class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab(event,'upcoming')"><i class="fa-solid fa-clock"></i> Upcoming</button>
+    <button class="tab-btn" onclick="switchTab(event,'completed')"><i class="fa-solid fa-check-double"></i> History</button>
+</div>
+
+<!-- Upcoming -->
+<div id="upcoming" class="tab-content active">
+    <div class="appointment-grid">
+        {% for app in upcoming_appointments %}
+        <div class="appointment-card">
+            <div class="card-header">
+                <div class="patient-info">
+                    <div class="patient-avatar">{{ app.patient_name|slice:":1" }}</div>
+                    <div>
+                        <h3 style="font-weight:700;font-size:1.1rem;">{{ app.patient_name }}</h3>
+                        <p style="font-size:0.85rem;color:var(--gray-500);">{{ app.disease_name|default:"General" }}</p>
+                    </div>
+                </div>
+                <span style="background:#E0E7FF;color:#4338CA;padding:0.3rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">SCHEDULED</span>
+            </div>
+            <div style="background:var(--gray-100);padding:1rem;border-radius:16px;">
+                <div class="detail-row"><i class="fa-solid fa-calendar"></i> {{ app.appointment_date }}</div>
+                <div class="detail-row"><i class="fa-solid fa-video"></i> {{ app.consultation_type|title }} Consultation</div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="openChatModal('{{ app.patient_id }}','{{ app.patient_name }}','{{ app.id }}')" style="grid-column:span 2;background:var(--secondary);">
+                    <i class="fa-solid fa-comments"></i> Start Consultation
+                </button>
+                <button class="btn btn-outline" onclick="openPrescriptionModal('{{ app.id }}','{{ app.patient_name }}')">
+                    <i class="fa-solid fa-file-prescription"></i> Write Prescription
+                </button>
+                <button class="btn btn-outline" onclick="markComplete('{{ app.id }}')">
+                    <i class="fa-solid fa-check"></i> Mark Complete
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- History -->
+<div id="completed" class="tab-content">
+    <div class="appointment-grid">
+        {% for app in completed_appointments %}
+        <div class="appointment-card" style="border-left:4px solid var(--secondary);">
+            <h3 style="font-weight:700;">{{ app.patient_name }}</h3>
+            <p style="color:var(--gray-500);font-size:0.9rem;margin:0.5rem 0;">{{ app.appointment_date }}</p>
+            <span style="background:#D1FAE5;color:#065F46;padding:0.3rem 0.75rem;border-radius:20px;font-size:0.75rem;font-weight:700;">COMPLETED</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ── Prescription Modal ─────────────────────────────────── -->
+<div id="prescriptionModal" class="modal">
+    <div class="modal-content">
+        <h2 style="font-family:var(--font-heading);font-weight:700;margin-bottom:1.5rem;">Write Prescription</h2>
+        <p id="prescPatientName" style="color:var(--gray-500);margin-bottom:2rem;"></p>
+        <form id="prescForm">
+            <div style="margin-bottom:1.5rem;">
+                <label style="display:block;margin-bottom:0.5rem;font-weight:600;">Medication</label>
+                <input type="text" id="medName" style="width:100%;padding:0.75rem;border:1px solid var(--gray-200);border-radius:12px;" required>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+                <div>
+                    <label style="display:block;margin-bottom:0.5rem;font-weight:600;">Dosage</label>
+                    <input type="text" id="dosage" placeholder="500mg" style="width:100%;padding:0.75rem;border:1px solid var(--gray-200);border-radius:12px;" required>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:0.5rem;font-weight:600;">Frequency</label>
+                    <input type="text" id="freq" placeholder="Twice daily" style="width:100%;padding:0.75rem;border:1px solid var(--gray-200);border-radius:12px;" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;background:var(--secondary);">Send Prescription</button>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- CHAT MODAL                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="chatModal" class="modal">
+    <div class="modal-content" style="max-width:860px;height:85vh;padding:0;display:flex;flex-direction:column;overflow:hidden;border-radius:32px;">
+
+        <!-- Chat header -->
+        <div style="background:var(--secondary);padding:1.25rem 2rem;color:white;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:1rem;">
+                <div id="chatHeaderAvatar" style="width:44px;height:44px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;overflow:hidden;">P</div>
+                <div>
+                    <h3 id="chatPatientName" style="margin:0;font-size:1.1rem;">Patient</h3>
+                    <div style="font-size:0.75rem;opacity:0.85;">
+                        <span style="display:inline-block;width:8px;height:8px;background:#10B981;border-radius:50%;border:2px solid white;margin-right:4px;"></span>Active Consultation
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;align-items:center;">
+                <button onclick="startAudioCall()" title="Start Audio Call" style="background:rgba(255,255,255,0.15);border:none;color:white;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:1rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                    <i class="fa-solid fa-phone"></i>
+                </button>
+                <button onclick="startVideoCall()" title="Start Video Call" style="background:rgba(255,255,255,0.15);border:none;color:white;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:1rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                    <i class="fa-solid fa-video"></i>
+                </button>
+                <button onclick="closeChatModal()" style="background:none;border:none;color:white;font-size:1.3rem;cursor:pointer;line-height:1;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages area -->
+        <div id="chatMessages" style="flex:1;overflow-y:auto;padding:1.5rem;background:#F8FAFC;display:flex;flex-direction:column;gap:0.75rem;scroll-behavior:smooth;"></div>
+
+        <!-- Input area -->
+        <div style="padding:1rem 1.25rem;background:white;border-top:1px solid #E2E8F0;flex-shrink:0;">
+            <div style="display:flex;gap:0.75rem;align-items:center;">
+                <input id="chatInput" type="text" placeholder="Message patient…" autocomplete="off"
+                    style="flex:1;padding:0.75rem 1.25rem;border:1px solid #E2E8F0;border-radius:100px;outline:none;background:#F8FAFC;font-size:0.95rem;">
+                <button id="chatSendBtn" style="width:44px;height:44px;border-radius:50%;background:var(--secondary);border:none;color:white;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<script>
+// ── Global State ──────────────────────────────────────────────────
+let currentAppId        = null;
+let chatAppointmentId   = null;
+let chatUnsubscribe     = null;
+let chatOtherPartyPhoto = null;
+let chatMyPhoto         = null;
+
+// ── Tabs ──────────────────────────────────────────────────────────
+function switchTab(e, name) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(name).classList.add('active');
+    e.currentTarget.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// STEP 1 — Open / Close chat modal
+// ══════════════════════════════════════════════════════════════════
+function openChatModal(patientId, patientName, appointmentId) {
+    chatAppointmentId = String(appointmentId);
+    chatOtherPartyPhoto = null;
+    chatMyPhoto = null;
+    document.getElementById('chatPatientName').textContent = patientName;
+    document.getElementById('chatHeaderAvatar').textContent = patientName.charAt(0).toUpperCase();
+    document.getElementById('chatMessages').innerHTML =
+        '<div style="text-align:center;color:#94A3B8;padding:2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</div>';
+    document.getElementById('chatModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    // Fetch both party photos
+    const myUid = firebase.auth().currentUser?.uid || "{{ user.uid }}";
+    Promise.all([
+        db.collection('users').doc(String(patientId)).get(),
+        db.collection('users').doc(myUid).get()
+    ]).then(([patientDoc, myDoc]) => {
+        chatOtherPartyPhoto = (patientDoc.data() || {}).photo_url || null;
+        chatMyPhoto         = (myDoc.data() || {}).photo_url || null;
+        const avatar = document.getElementById('chatHeaderAvatar');
+        if (chatOtherPartyPhoto) {
+            avatar.innerHTML = `<img src="${chatOtherPartyPhoto}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
+        }
+    }).catch(() => {});
+
+    const user = firebase.auth().currentUser;
+    if (user) { subscribeToChat(); return; }
+    const off = firebase.auth().onAuthStateChanged(u => { off(); if (u) subscribeToChat(); });
+}
+
+function closeChatModal() {
+    document.getElementById('chatModal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+    if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// STEP 2 — Subscribe to Firestore messages (real-time)
+// ══════════════════════════════════════════════════════════════════
+function subscribeToChat() {
+    if (chatUnsubscribe) { chatUnsubscribe(); chatUnsubscribe = null; }
+
+    const box = document.getElementById('chatMessages');
+    const ref = db.collection('appointments').doc(chatAppointmentId).collection('messages');
+
+    chatUnsubscribe = ref.onSnapshot(snap => {
+        if (snap.empty) {
+            box.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:2rem;font-size:0.9rem;">No messages yet. Start the conversation!</div>';
+            return;
+        }
+
+        const msgs = [];
+        snap.forEach(d => msgs.push(d.data()));
+        msgs.sort((a,b) => (a.timestamp?.seconds||0) - (b.timestamp?.seconds||0));
+
+        const myUid = firebase.auth().currentUser?.uid;
+
+        box.innerHTML = '';
+        msgs.forEach(m => {
+            const el = document.createElement('div');
+            el.className = 'msg-bubble ' + (m.sender_id === myUid ? 'msg-sent' : 'msg-received');
+            el.textContent = m.text || '';
+            box.appendChild(el);
+        });
+        box.scrollTop = box.scrollHeight;
+
+    }, err => {
+        console.error('Chat Firestore error:', err.code, err.message);
+        box.innerHTML = `<div style="text-align:center;color:red;padding:1rem;">
+            <strong>Error: ${err.code}</strong><br><small>Open F12 console for details.</small>
+        </div>`;
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// STEP 3 — Send a message
+// ══════════════════════════════════════════════════════════════════
+async function sendMessage() {
+    const inp = document.getElementById('chatInput');
+    const txt = inp.value.trim();
+    if (!txt || !chatAppointmentId) return;
+
+    const myUid = firebase.auth().currentUser?.uid;
+    if (!myUid) { alert('Not signed in – please refresh the page.'); return; }
+
+    inp.value = '';
+    try {
+        await db.collection('appointments').doc(chatAppointmentId).collection('messages').add({
+            text:        txt,
+            sender_id:   myUid,
+            sender_name: "Dr. {{ user.first_name }} {{ user.last_name }}",
+            type:        'text',
+            timestamp:   firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch(e) {
+        console.error('Send failed:', e);
+        inp.value = txt;
+        alert('Send failed: ' + e.message);
+    }
+}
+
+document.getElementById('chatSendBtn').addEventListener('click', sendMessage);
+document.getElementById('chatInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// ══════════════════════════════════════════════════════════════════
+// STEP 4 — Start video / audio call
+// ══════════════════════════════════════════════════════════════════
+function startVideoCall() {
+    if (!chatAppointmentId) return;
+    window.location.href = `/video-call/${chatAppointmentId}/`;
+}
+
+function startAudioCall() {
+    if (!chatAppointmentId) return;
+    window.location.href = `/video-call/${chatAppointmentId}/?audio=1`;
+}
+
+// ── Prescription ──────────────────────────────────────────────────
+function openPrescriptionModal(id, name) {
+    currentAppId = id;
+    document.getElementById('prescPatientName').textContent = `Patient: ${name}`;
+    document.getElementById('prescriptionModal').classList.add('active');
+}
+
+document.getElementById('prescForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const r = await fetch('/api/appointments/create-prescription/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+        body: JSON.stringify({
+            appointment_id: currentAppId,
+            medication_name: document.getElementById('medName').value,
+            dosage: document.getElementById('dosage').value,
+            frequency: document.getElementById('freq').value
+        })
+    });
+    if (r.ok) { alert('Prescription sent!'); document.getElementById('prescriptionModal').classList.remove('active'); }
+});
+
+async function markComplete(id) {
+    if (confirm('Mark this appointment as complete?')) {
+        const r = await fetch(`/api/appointments/${id}/complete/`, {method:'POST',headers:{'X-CSRFToken':'{{ csrf_token }}'}});
+        if (r.ok) location.reload();
+    }
+}
+
+// Close modal when clicking backdrop
+window.addEventListener('click', e => {
+    if (e.target.id === 'chatModal') closeChatModal();
+    if (e.target.id === 'prescriptionModal') document.getElementById('prescriptionModal').classList.remove('active');
+});
+</script>
+
+{% endblock %}
