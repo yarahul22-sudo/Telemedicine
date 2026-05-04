@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Profile | TeleMed{% endblock %}
+
+{% block content %}
+<div class="dashboard-container" style="max-width: 800px; margin: 40px auto; padding: 2rem; background: white; border-radius: 24px; box-shadow: var(--shadow-lg);">
+    <h1 style="color: var(--primary); margin-bottom: 2rem; border-bottom: 2px solid var(--gray-200); padding-bottom: 1rem;">
+        <i class="fa-solid fa-user-pen"></i> Edit Profile
+    </h1>
+
+    <form method="POST" action="{% url 'edit_profile' %}">
+        {% csrf_token %}
+        
+        <!-- Common Info -->
+        <h3 style="margin-bottom: 1rem; color: var(--dark);">Personal Details</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">First Name</label>
+                <input type="text" name="first_name" value="{{ profile.first_name }}" required 
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Last Name</label>
+                <input type="text" name="last_name" value="{{ profile.last_name }}" required
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Profile Image URL</label>
+                <input type="url" name="profile_image_url" value="{{ profile.profile_image_url }}" placeholder="https://example.com/your-photo.jpg"
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+                <small style="color: var(--gray-500); margin-top: 0.5rem; display: block;">Paste a direct link to an image (Imgur, Unsplash, etc.)</small>
+            </div>
+        </div>
+
+        {% if user.role == 'doctor' %}
+        <!-- Doctor Specific -->
+        <h3 style="margin-bottom: 1rem; color: var(--dark);">Professional Details</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Specialization</label>
+                <input type="text" name="specialization" value="{{ profile.specialization|title }}" required
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">License Number</label>
+                <input type="text" name="license_number" value="{{ profile.license_number }}" required
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Years of Experience</label>
+                <input type="number" name="experience_years" value="{{ profile.experience_years }}" required
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Consultation Fee ($)</label>
+                <input type="number" step="0.01" name="consultation_fee" value="{{ profile.consultation_fee }}" required
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Qualifications</label>
+                <input type="text" name="qualification" value="{{ profile.qualification }}" required
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Bio</label>
+                <textarea name="bio" rows="4" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">{{ profile.bio }}</textarea>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Available Days</label>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    {% for day in "Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday"|slice:":" %}
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" name="available_days" value="{{ day }}" 
+                               {% if day in profile.available_days %}checked{% endif %}> {{ day }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        {% elif user.role == 'patient' %}
+        <!-- Patient Specific -->
+        <h3 style="margin-bottom: 1rem; color: var(--dark);">Medical Details</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Date of Birth</label>
+                <input type="date" name="date_of_birth" value="{{ profile.date_of_birth }}"
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+            </div>
+            <div class="form-group">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Emergency Contact Name</label>
+                <input type="text" name="emergency_contact" value="{{ profile.emergency_contact }}"
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Emergency Phone</label>
+                <input type="tel" name="emergency_phone" value="{{ profile.emergency_phone }}"
+                       style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Medical History</label>
+                <textarea name="medical_history" rows="3" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">{{ profile.medical_history }}</textarea>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--gray-700);">Allergies</label>
+                <textarea name="allergies" rows="2" style="width: 100%; padding: 0.8rem; border: 1px solid var(--gray-200); border-radius: var(--radius);">{{ profile.allergies }}</textarea>
+            </div>
+        </div>
+        {% endif %}
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline" style="flex: 1; text-align: center; border-radius: 50px;">Cancel</a>
+            <button type="submit" class="btn btn-primary" style="flex: 1; border-radius: 50px;">Save Changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
