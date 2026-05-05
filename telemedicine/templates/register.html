@@ -388,13 +388,26 @@
 
         try {
             // Create Firebase User
+            console.log('📝 Creating Firebase account for:', email);
             const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
-            const token = await userCredential.user.getIdToken();
+            console.log('✅ Firebase account created:', userCredential.user.uid);
+            
+            // Small delay to ensure token is properly issued
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const token = await userCredential.user.getIdToken(true);
+            console.log('🔑 Token received, length:', token.length);
+            console.log('🔑 Token preview:', token.substring(0, 50) + '...');
+            
+            // Store token in localStorage for API calls
+            localStorage.setItem('firebase_token', token);
+            console.log('💾 Token stored in localStorage');
             
             // Add token to form data
             formData.token = token;
 
             // Send to Django
+            console.log('📤 Sending registration data to backend...');
             const response = await fetch('/register/', {
                 method: 'POST',
                 headers: {
@@ -405,21 +418,40 @@
             });
 
             const data = await response.json();
+            console.log('📥 Backend response:', response.status, data);
+            
             if (response.ok) {
-                alert('Registration successful! Please login.');
+                alert('✅ Registration successful! Please login.');
                 window.location.href = '/login/';
             } else {
                 // If backend fails, delete the Firebase user to allow retry
-                await userCredential.user.delete();
-                alert(data.error || 'Registration failed');
+                console.log('❌ Backend error, cleaning up Firebase user...');
+                try {
+                    await userCredential.user.delete();
+                    console.log('🗑️ Firebase user deleted');
+                } catch (deleteErr) {
+                    console.error('Could not delete Firebase user:', deleteErr);
+                }
+                alert('❌ Registration error: ' + (data.error || 'Please try again'));
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
         } catch (error) {
-            // Generic message — don't reveal whether email exists
-            const msg = error.code === 'auth/email-already-in-use'
-                ? 'An account with this email already exists. Please login instead.'
-                : 'Registration failed. Please check your details and try again.';
+            console.error('Registration error:', error.code, error.message);
+            let msg = 'Registration failed. ';
+            
+            if (error.code === 'auth/email-already-in-use') {
+                msg = '📧 This email already has an account. Please login instead.';
+            } else if (error.code === 'auth/weak-password') {
+                msg = '🔐 Password is too weak. Use at least 6 characters.';
+            } else if (error.code === 'auth/invalid-email') {
+                msg = '✉️ Invalid email address.';
+            } else if (error.code === 'auth/operation-not-allowed') {
+                msg = '⚙️ Email/password registration is not enabled. Contact support.';
+            } else {
+                msg += error.message || 'Please check your details and try again.';
+            }
+            
             alert(msg);
             btn.disabled = false;
             btn.innerHTML = originalText;

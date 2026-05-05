@@ -54,7 +54,18 @@ class DoctorProfile(models.Model):
         help_text="Consultation fee in USD"
     )
     profile_picture = models.ImageField(upload_to='doctor_profiles/', null=True, blank=True)
+    profile_image_url = models.URLField(max_length=500, blank=True, help_text="Public URL to profile photo")
     bio = models.TextField(blank=True, help_text="Professional biography")
+    available_days = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Available days (e.g., Monday,Tuesday,Wednesday,Thursday,Friday)",
+        default="Monday,Tuesday,Wednesday,Thursday,Friday"
+    )
+    is_approved = models.BooleanField(
+        default=False,
+        help_text="Admin approval status for doctor account"
+    )
     rating = models.FloatField(default=5.0, help_text="Doctor rating (1-5)")
     total_appointments = models.IntegerField(default=0)
     is_available = models.BooleanField(default=True)

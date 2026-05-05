@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==========================================
+    // Helper Functions
+    // ==========================================
+    
+    // Check if the user is signed in via Firebase Auth
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if the user is accessing their own document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ==========================================
+    // Collection Rules
+    // ==========================================
+
+    // 1. Users Collection (Patients & Doctors)
+    match /users/{userId} {
+      // Anyone who is logged in can view user profiles (needed so patients can search for doctors)
+      allow read: if isAuthenticated();
+      
+      // A user can only create, edit, or delete their own profile
+      allow write: if isOwner(userId);
+    }
+
+    // 2. Appointments Collection
+    match /appointments/{appId} {
+      // Patients and Doctors involved in the appointment can view it
+      allow read: if isAuthenticated() && 
+                  (resource.data.patient_id == request.auth.uid || 
+                   resource.data.doctor_id == request.auth.uid);
+                   
+      // Allow creation if the creator is the patient
+      // Allow updates if the updater is the doctor (to change status) or patient (to cancel)
+      allow write: if isAuthenticated() && 
+                   (request.resource.data.patient_id == request.auth.uid || 
+                    request.resource.data.doctor_id == request.auth.uid ||
+                    (resource != null && (resource.data.patient_id == request.auth.uid || resource.data.doctor_id == request.auth.uid)));
+
+      // Chat messages subcollection — both doctor and patient can read/write
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated() && (
+          get(/databases/$(database)/documents/appointments/$(appId)).data.patient_id == request.auth.uid ||
+          get(/databases/$(database)/documents/appointments/$(appId)).data.doctor_id == request.auth.uid
+        );
+      }
+    }
+
+    // 3. Prescriptions Collection
+    match /prescriptions/{rxId} {
+      // The patient who received it, and the doctor who prescribed it can view it
+      allow read: if isAuthenticated() && 
+                  (resource.data.patient_id == request.auth.uid || 
+                   resource.data.doctor_id == request.auth.uid);
+                   
+      // Only doctors can write/create prescriptions
+      allow write: if isAuthenticated() && 
+                   ((resource == null && request.resource.data.doctor_id == request.auth.uid) || 
+                    (resource != null && resource.data.doctor_id == request.auth.uid));
+    }
+    
+    // 4. Chat System Collection (For Doctor-Patient Messaging)
+    match /chats/{chatId} {
+      allow read, write: if isAuthenticated();
+                           
+      // Subcollection for individual messages
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+  }
+}

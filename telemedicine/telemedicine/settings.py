@@ -10,22 +10,30 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env
+env_path = BASE_DIR / '.env'
+load_dotenv(dotenv_path=env_path)
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-bi_8nznon$s&r=zjq@%3p#v&wzys#!5ef_iz5@dn8cs397)2nm'
+# SECURITY: Secret key MUST be set in .env — never commit this to version control
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-CHANGE-THIS-KEY-IN-DOT-ENV-BEFORE-DEPLOYING')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Set DEBUG=False in .env for production
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -39,6 +47,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
+    'rest_framework_simplejwt',
+    'api',
     'users',
     'appointments',
     'accounts',
@@ -68,6 +78,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'telemedicine.context_processors.firebase_config',
             ],
         },
     },
@@ -78,12 +89,40 @@ WSGI_APPLICATION = 'telemedicine.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
+# Note: SQLite is used ONLY for Django's internal session management.
+# All application data (Users, Appointments, etc.) is now stored in Firebase Firestore.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
+}
+
+# Custom Authentication Backend
+AUTHENTICATION_BACKENDS = [
+    # Required for /djangoadmin/ superuser login
+    'django.contrib.auth.backends.ModelBackend',
+    # Firebase/Firestore backend for regular user logins
+    'accounts.firestore_auth.FirestoreBackend',
+]
+
+
+# REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',  # Allow all by default, protect per-endpoint
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
 }
 
 
@@ -128,15 +167,90 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ─── Security Headers ─────────────────────────────────────────────────────────
+# Cookies: prevent JS access + require HTTPS in production
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+# Set these to True when running on HTTPS in production
+SESSION_COOKIE_SECURE = os.environ.get('COOKIE_SECURE', 'False') == 'True'
+CSRF_COOKIE_SECURE = os.environ.get('COOKIE_SECURE', 'False') == 'True'
+
+# Anti-clickjacking
+X_FRAME_OPTIONS = 'DENY'
+
+# Additional browser protections
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Referrer policy
+SECURE_REFERRER_POLICY = 'same-origin'
+
+# Session Timeout (10 Minutes)
+SESSION_COOKIE_AGE = 600  # 10 minutes in seconds
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
 # Django REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'accounts.firebase_auth_drf.FirebaseTokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ]
 }
+
+# Firebase & Twilio Config
+FIREBASE_API_KEY = os.environ.get('FIREBASE_API_KEY', '')
+FIREBASE_AUTH_DOMAIN = os.environ.get('FIREBASE_AUTH_DOMAIN', '')
+FIREBASE_DATABASE_URL = os.environ.get('FIREBASE_DATABASE_URL', '')
+FIREBASE_PROJECT_ID = os.environ.get('FIREBASE_PROJECT_ID', '')
+FIREBASE_STORAGE_BUCKET = os.environ.get('FIREBASE_STORAGE_BUCKET', '')
+FIREBASE_MESSAGING_SENDER_ID = os.environ.get('FIREBASE_MESSAGING_SENDER_ID', '')
+FIREBASE_APP_ID = os.environ.get('FIREBASE_APP_ID', '')
+
+# Initialize Firebase Admin SDK
+import firebase_admin
+from firebase_admin import credentials
+import os
+
+try:
+    if not firebase_admin._apps:
+        # Try loading from environment variable first (recommended for security)
+        service_account_info = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
+        
+        if service_account_info:
+            import json
+            # Handle potential single quotes from .env
+            if service_account_info.startswith("'") and service_account_info.endswith("'"):
+                service_account_info = service_account_info[1:-1]
+            
+            cred_dict = json.loads(service_account_info)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+        else:
+            # Fallback to file for local development
+            cred_path = os.path.join(BASE_DIR, 'firebase-credentials.json')
+            if os.path.exists(cred_path):
+                cred = credentials.Certificate(cred_path)
+                firebase_admin.initialize_app(cred)
+except Exception as e:
+    print(f"Failed to initialize Firebase Admin SDK: {e}")
+
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
+TWILIO_API_KEY = os.environ.get('TWILIO_API_KEY', '')
+TWILIO_API_SECRET = os.environ.get('TWILIO_API_SECRET', '')
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = f"TeleMed <{EMAIL_HOST_USER}>"
+

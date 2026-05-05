@@ -3,9 +3,9 @@ from users import views
 
 urlpatterns = [
     # Authentication endpoints
-    path('register/', views.register, name='register'),
-    path('login/', views.login, name='login'),
-    path('logout/', views.logout, name='logout'),
+    path('register/', views.register, name='api_register'),
+    path('login/', views.login, name='api_login'),
+    path('logout/', views.logout, name='api_logout'),
     path('role/', views.get_user_role, name='get_user_role'),
     
     # Patient endpoints

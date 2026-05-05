@@ -21,6 +21,7 @@ class PatientProfile(models.Model):
         validators=[RegexValidator(r'^\+?1?\d{9,15}$', 'Enter a valid phone number')]
     )
     profile_picture = models.ImageField(upload_to='patient_profiles/', null=True, blank=True)
+    profile_image_url = models.URLField(max_length=500, blank=True, help_text="Public URL to profile photo")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

@@ -1,0 +1,47 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+telemedicine/db.sqlite3
+telemedicine/db.sqlite3-journal
+
+# Environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Secrets & Environment Variables
+.env
+.env.local
+.env.*
+telemedicine/.env
+
+# Firebase
+firebase-credentials.json
+telemedicine/firebase-credentials.json
+
+# Secrets and Config
+.env
+firebase-credentials.json
+telemedicine/firebase-credentials.json
+
+# Setup and Utility Scripts
+setup_dual_admins.py
+sync_firestore_to_local.py
+check_db_schema.py
+test_email.py
+
+# IDEs and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

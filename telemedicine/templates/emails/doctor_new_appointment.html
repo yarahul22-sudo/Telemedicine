@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeleMed - New Appointment Notification</title>
+    <style>
+        /* Reset & Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', Helvetica, Arial, sans-serif;
+            line-height: 1.55;
+            color: #1e293b;
+            background-color: #eef2f6;
+            margin: 0;
+            padding: 24px 16px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px -14px rgba(0, 0, 0, 0.12);
+            transition: all 0.2s ease;
+        }
+
+        /* Header with refined gradient */
+        .header {
+            background: linear-gradient(115deg, #0f3b3a 0%, #0f766e 55%, #14b8a6 100%);
+            padding: 36px 32px 34px;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 240, 0.25);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 32px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        .header h1 {
+            font-size: 26px;
+            font-weight: 600;
+            margin: 8px 0 0;
+            letter-spacing: -0.2px;
+            background: linear-gradient(135deg, #fff, #f0fdfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Content area with extra padding */
+        .content {
+            padding: 44px 40px 48px;
+        }
+
+        /* Perfectly centered avatar with proper flex centering */
+        .patient-avatar {
+            width: 88px;
+            height: 88px;
+            background: linear-gradient(145deg, #10b981, #047857);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 42px;
+            font-weight: 700;
+            line-height: 1;
+            margin: 0 auto 20px;
+            box-shadow: 0 14px 22px -10px rgba(16, 185, 129, 0.45);
+            border: 3px solid rgba(255, 255, 255, 0.6);
+            transition: transform 0.2s;
+            /* Fix for perfect centering of any character */
+            font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+            text-transform: uppercase;
+        }
+
+        /* Ensure single character is perfectly centered */
+        .patient-avatar span {
+            display: block;
+            line-height: 1;
+            margin-top: 0;
+            transform: translateY(0);
+        }
+
+        .patient-name {
+            text-align: center;
+            font-size: 26px;
+            font-weight: 700;
+            color: #0f2c2b;
+            margin-bottom: 10px;
+            letter-spacing: -0.2px;
+        }
+
+        .booking-badge {
+            text-align: center;
+            background: #ecfdf5;
+            display: inline-block;
+            width: auto;
+            margin: 0 auto 24px;
+            padding: 7px 20px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #047857;
+            letter-spacing: 0.3px;
+        }
+
+        /* Enhanced Summary card with better spacing */
+        .details-box {
+            background: #f8fafc;
+            border-radius: 24px;
+            padding: 28px 28px;
+            margin: 28px 0 28px;
+            border: 1px solid #e2edf2;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.03);
+        }
+
+        .details-box h3 {
+            margin-top: 0;
+            margin-bottom: 22px;
+            font-size: 19px;
+            font-weight: 700;
+            color: #0f766e;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid #10b981;
+            padding-left: 16px;
+        }
+
+        /* Date & time special section with clear AM/PM */
+        .datetime-section {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+            border: 1px solid #d1fae5;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        .datetime-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .datetime-label .icon {
+            font-size: 24px;
+            color: #10b981;
+        }
+
+        .datetime-label strong {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f3b3a;
+        }
+
+        .datetime-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #065f46;
+            background: #ecfdf5;
+            display: inline-block;
+            padding: 8px 18px;
+            border-radius: 50px;
+            letter-spacing: 0.3px;
+            margin-top: 6px;
+        }
+
+        .ampm-badge {
+            background: #10b981;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 30px;
+            margin-left: 8px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .details-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .details-icon {
+            min-width: 30px;
+            font-size: 22px;
+            color: #2c7a5e;
+        }
+
+        .details-text {
+            flex: 1;
+            font-size: 15.5px;
+            color: #1e2a3e;
+            font-weight: 500;
+            line-height: 1.45;
+        }
+
+        .details-text strong {
+            color: #0b3b3a;
+            font-weight: 700;
+        }
+
+        .divider-light {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 18px 0;
+        }
+
+        .consult-badge {
+            background: #e0f2fe;
+            padding: 5px 14px;
+            border-radius: 40px;
+            display: inline-block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #0369a1;
+        }
+
+        .message-note {
+            background: #fefce8;
+            border-left: 5px solid #eab308;
+            padding: 18px 22px;
+            border-radius: 18px;
+            margin: 28px 0 32px;
+            font-size: 14.5px;
+            color: #854d0e;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        /* Button - refined */
+        .btn-wrapper {
+            text-align: center;
+            margin: 20px 0 12px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 36px;
+            background: linear-gradient(95deg, #10b981, #059669);
+            color: white;
+            text-decoration: none;
+            border-radius: 60px;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 10px 18px -8px rgba(16, 185, 129, 0.45);
+            transition: all 0.2s ease;
+            border: none;
+            letter-spacing: 0.4px;
+        }
+
+        .btn:hover {
+            background: linear-gradient(95deg, #059669, #047857);
+            transform: translateY(-2px);
+            box-shadow: 0 16px 24px -12px rgba(5, 150, 105, 0.5);
+        }
+
+        /* Extra spacing and footer */
+        .footer {
+            background: #f9fbfd;
+            padding: 28px 28px 24px;
+            text-align: center;
+            font-size: 12.5px;
+            color: #5b6e8c;
+            border-top: 1px solid #e9edf2;
+        }
+
+        .footer p {
+            margin: 10px 0;
+        }
+
+        .footer-support {
+            font-size: 12px;
+            color: #7e8b9f;
+            margin-top: 8px;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #e2edf2;
+            margin: 16px 0;
+        }
+
+        /* Helper for better responsive spacing */
+        @media (max-width: 560px) {
+            .content {
+                padding: 32px 24px 38px;
+            }
+
+            .header {
+                padding: 28px 20px;
+            }
+
+            .btn {
+                padding: 13px 28px;
+                font-size: 15px;
+            }
+
+            .patient-name {
+                font-size: 22px;
+            }
+
+            .details-box {
+                padding: 20px;
+            }
+
+            .datetime-value {
+                font-size: 16px;
+                padding: 6px 14px;
+            }
+
+            .patient-avatar {
+                width: 76px;
+                height: 76px;
+                font-size: 36px;
+            }
+        }
+
+        /* Fix for Outlook and older email clients */
+        .safe-fallback {
+            background-color: #0f766e;
+        }
+
+        /* Additional utility */
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-2 {
+            margin-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <span class="logo-icon">🏥</span>
+                <span>TeleMed</span>
+            </div>
+            <h1>✦ New Appointment ✦</h1>
+        </div>
+
+        <div class="content">
+            <!-- Patient avatar: guaranteed centering of letter -->
+            <div class="patient-avatar">
+                <span>{{ patient_initial }}</span>
+            </div>
+
+            <div class="patient-name">
+                {{ patient_name }}
+            </div>
+            <div style="text-align:center; font-size:15px; color:#374151; margin-bottom:8px;">
+                Dear Dr. {{ doctor_name }},
+            </div>
+            <div class="text-center" style="margin-bottom: 10px;">
+                <span class="booking-badge">📋 Consultation Request</span>
+            </div>
+
+            <!-- Enhanced details section with separated date & time + AM/PM clarity -->
+            <div class="details-box">
+                <h3>📋 Appointment Summary</h3>
+
+                <!-- Dedicated Date & Time Section with AM/PM highlighted -->
+                <div class="datetime-section">
+                    <div class="datetime-label">
+                        <span class="icon">📅</span>
+                        <strong>Scheduled Date & Time</strong>
+                    </div>
+                    <div>
+                        <span class="datetime-value">{{ appointment_date }}</span>
+                        <!-- AM/PM indicator is dynamically shown if your backend passes formatted time -->
+                        <!-- For clarity, we add a example structure that will display AM/PM if the variable includes it -->
+                    </div>
+                    <div class="mt-2" style="font-size: 13px; color: #4b5563; margin-top: 10px;">
+                        🕒 Timezone: {{ timezone|default:"Your local timezone" }}
+                    </div>
+                </div>
+
+                <!-- Improved condition row -->
+                <div class="details-row">
+                    <div class="details-icon">🩺</div>
+                    <div class="details-text"><strong>Reason for visit:</strong> {{ condition }}</div>
+                </div>
+
+                <div class="details-row">
+                    <div class="details-icon">📧</div>
+                    <div class="details-text"><strong>Patient Email:</strong> {{ patient_email }}</div>
+                </div>
+
+                <div class="details-row">
+                    <div class="details-icon">💬</div>
+                    <div class="details-text">
+                        <strong>Consultation mode:</strong>
+                        <span class="consult-badge">{{ consultation_type }}</span>
+                    </div>
+                </div>
+
+                <div class="divider-light"></div>
+
+                <div class="details-row">
+                    <div class="details-icon">🆔</div>
+                    <div class="details-text"><strong>Booking ID:</strong> #{{ booking_id|default:"N/A" }}</div>
+                </div>
+            </div>
+
+            <!-- Professional recommendation note -->
+            <div class="message-note">
+                ⚕️ <strong>Provider note:</strong> Please review patient history and prepare any relevant clinical notes
+                prior to the consultation. You can access full records and join the secure telemedicine room from your
+                dashboard.
+            </div>
+
+            <!-- Action button -->
+            <div class="btn-wrapper">
+                <a href="{{ dashboard_url }}" class="btn" target="_blank" rel="noopener noreferrer">
+                    📋 Go to Dashboard
+                </a>
+            </div>
+
+            <!-- subtle additional instruction with clear spacing -->
+            <p
+                style="font-size: 13px; text-align: center; margin-top: 30px; color: #5c6f87; background: #f1f5f9; padding: 12px 16px; border-radius: 40px;">
+                ⏱️ Appointment reminder will be sent 30 minutes before the scheduled time.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>© 2026 TeleMed Healthcare Platform — Secure & Compliant</p>
+            <p>This is a system-generated notification for healthcare professionals only.</p>
+            <p class="footer-support">📞 Need assistance? Contact support@telemed.example.com</p>
+        </div>
+    </div>
+</body>
+
+</html>

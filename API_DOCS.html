@@ -1,0 +1,671 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telemedicine API Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: 600px;
+        }
+        
+        .sidebar {
+            background: #f8f9fa;
+            border-right: 1px solid #e0e0e0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .sidebar h3 {
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 15px;
+            margin-top: 20px;
+            font-weight: 600;
+        }
+        
+        .sidebar a {
+            display: block;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            color: #333;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .sidebar a:hover {
+            background: #e0e0e0;
+            padding-left: 16px;
+        }
+        
+        .main {
+            padding: 40px;
+            overflow-y: auto;
+        }
+        
+        .endpoint {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+        
+        .endpoint h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+        }
+        
+        .method.GET { background: #61affe; }
+        .method.POST { background: #49cc90; }
+        .method.PUT { background: #fca130; }
+        .method.PATCH { background: #50e3c2; }
+        .method.DELETE { background: #f93e3e; }
+        
+        .path {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 10px;
+            color: #666;
+            font-size: 13px;
+        }
+        
+        .description {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #e0e0e0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Telemedicine API</h1>
+            <p>Complete REST API Documentation</p>
+        </div>
+        
+        <div class="content">
+            <div class="sidebar">
+                <h3>Endpoints</h3>
+<h3 style='margin-top: 30px;'>Admin</h3>
+<a href='#admin_dashboard_get_43'>GET /admin/dashboard</a>
+<a href='#admin_doctors_pending_get_44'>GET /admin/doctors/pending</a>
+<a href='#admin_doctors_application_id_approve_post_45'>POST /admin/doctors/{application_id}/approve</a>
+<a href='#admin_doctors_application_id_reject_post_46'>POST /admin/doctors/{application_id}/reject</a>
+<a href='#admin_payments_report_get_47'>GET /admin/payments/report</a>
+<h3 style='margin-top: 30px;'>Appointments</h3>
+<a href='#appointments_book_post_22'>POST /appointments/book</a>
+<a href='#appointments_get_23'>GET /appointments</a>
+<a href='#appointments_appointment_id_get_24'>GET /appointments/{appointment_id}</a>
+<a href='#appointments_appointment_id_reschedule_put_25'>PUT /appointments/{appointment_id}/reschedule</a>
+<a href='#appointments_appointment_id_delete_26'>DELETE /appointments/{appointment_id}</a>
+<a href='#appointments_appointment_id_complete_post_27'>POST /appointments/{appointment_id}/complete</a>
+<h3 style='margin-top: 30px;'>Authentication</h3>
+<a href='#auth_register_post_0'>POST /auth/register</a>
+<a href='#auth_login_post_1'>POST /auth/login</a>
+<a href='#auth_logout_post_2'>POST /auth/logout</a>
+<a href='#auth_refresh-token_post_3'>POST /auth/refresh-token</a>
+<a href='#auth_verify-email_post_4'>POST /auth/verify-email</a>
+<a href='#auth_password-reset_post_5'>POST /auth/password-reset</a>
+<a href='#auth_password-reset-confirm_post_6'>POST /auth/password-reset-confirm</a>
+<a href='#auth_2fa_enable_post_7'>POST /auth/2fa/enable</a>
+<h3 style='margin-top: 30px;'>Doctors</h3>
+<a href='#doctors_get_13'>GET /doctors</a>
+<a href='#doctors_doctor_id_get_14'>GET /doctors/{doctor_id}</a>
+<a href='#doctors_doctor_id_availability_get_15'>GET /doctors/{doctor_id}/availability</a>
+<a href='#doctors_doctor_id_reviews_get_16'>GET /doctors/{doctor_id}/reviews</a>
+<a href='#doctors_register_post_17'>POST /doctors/register</a>
+<a href='#doctors_profile_put_18'>PUT /doctors/profile</a>
+<h3 style='margin-top: 30px;'>Medical Records</h3>
+<a href='#medical-records_upload_post_36'>POST /medical-records/upload</a>
+<a href='#medical-records_get_37'>GET /medical-records</a>
+<a href='#medical-records_record_id_delete_38'>DELETE /medical-records/{record_id}</a>
+<h3 style='margin-top: 30px;'>Patients</h3>
+<a href='#patients_profile_get_19'>GET /patients/profile</a>
+<a href='#patients_profile_put_20'>PUT /patients/profile</a>
+<a href='#patients_medical-records_get_21'>GET /patients/medical-records</a>
+<h3 style='margin-top: 30px;'>Payments</h3>
+<a href='#payments_process_post_39'>POST /payments/process</a>
+<a href='#payments_history_get_40'>GET /payments/history</a>
+<a href='#payments_refund_post_41'>POST /payments/refund</a>
+<a href='#payments_invoices_invoice_id_get_42'>GET /payments/invoices/{invoice_id}</a>
+<h3 style='margin-top: 30px;'>Prescriptions</h3>
+<a href='#prescriptions_create_post_32'>POST /prescriptions/create</a>
+<a href='#prescriptions_get_33'>GET /prescriptions</a>
+<a href='#prescriptions_prescription_id_get_34'>GET /prescriptions/{prescription_id}</a>
+<a href='#prescriptions_prescription_id_download_post_35'>POST /prescriptions/{prescription_id}/download</a>
+<h3 style='margin-top: 30px;'>Users</h3>
+<a href='#users_profile_get_8'>GET /users/profile</a>
+<a href='#users_profile_put_9'>PUT /users/profile</a>
+<a href='#users_password_put_10'>PUT /users/password</a>
+<a href='#users_preferences_get_11'>GET /users/preferences</a>
+<a href='#users_preferences_put_12'>PUT /users/preferences</a>
+<h3 style='margin-top: 30px;'>Video Calls</h3>
+<a href='#video-calls_initialize_post_28'>POST /video-calls/initialize</a>
+<a href='#video-calls_call_session_id_stats_get_29'>GET /video-calls/{call_session_id}/stats</a>
+<a href='#video-calls_call_session_id_end_post_30'>POST /video-calls/{call_session_id}/end</a>
+<a href='#video-calls_call_session_id_record_post_31'>POST /video-calls/{call_session_id}/record</a>
+
+            </div>
+            
+            <div class="main">
+
+            <div class="endpoint" id="auth_register_post_0">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /auth/register
+                </h3>
+                <p class="description">Register new user</p>
+                <p class="path">https://api.telemedicine.moscow/v1/auth/register</p>
+            </div>
+
+            <div class="endpoint" id="auth_login_post_1">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /auth/login
+                </h3>
+                <p class="description">Login user</p>
+                <p class="path">https://api.telemedicine.moscow/v1/auth/login</p>
+            </div>
+
+            <div class="endpoint" id="auth_logout_post_2">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /auth/logout
+                </h3>
+                <p class="description">Logout user</p>
+                <p class="path">https://api.telemedicine.moscow/v1/auth/logout</p>
+            </div>
+
+            <div class="endpoint" id="auth_refresh-token_post_3">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /auth/refresh-token
+                </h3>
+                <p class="description">Refresh access token</p>
+                <p class="path">https://api.telemedicine.moscow/v1/auth/refresh-token</p>
+            </div>
+
+            <div class="endpoint" id="auth_verify-email_post_4">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /auth/verify-email
+                </h3>
+                <p class="description">Verify email</p>
+                <p class="path">https://api.telemedicine.moscow/v1/auth/verify-email</p>
+            </div>
+
+            <div class="endpoint" id="auth_password-reset_post_5">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /auth/password-reset
+                </h3>
+                <p class="description">Request password reset</p>
+                <p class="path">https://api.telemedicine.moscow/v1/auth/password-reset</p>
+            </div>
+
+            <div class="endpoint" id="auth_password-reset-confirm_post_6">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /auth/password-reset-confirm
+                </h3>
+                <p class="description">Confirm password reset</p>
+                <p class="path">https://api.telemedicine.moscow/v1/auth/password-reset-confirm</p>
+            </div>
+
+            <div class="endpoint" id="auth_2fa_enable_post_7">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /auth/2fa/enable
+                </h3>
+                <p class="description">Enable 2FA</p>
+                <p class="path">https://api.telemedicine.moscow/v1/auth/2fa/enable</p>
+            </div>
+
+            <div class="endpoint" id="users_profile_get_8">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /users/profile
+                </h3>
+                <p class="description">Get user profile</p>
+                <p class="path">https://api.telemedicine.moscow/v1/users/profile</p>
+            </div>
+
+            <div class="endpoint" id="users_profile_put_9">
+                <h3>
+                    <span class="method PUT">PUT</span>
+                    /users/profile
+                </h3>
+                <p class="description">Update user profile</p>
+                <p class="path">https://api.telemedicine.moscow/v1/users/profile</p>
+            </div>
+
+            <div class="endpoint" id="users_password_put_10">
+                <h3>
+                    <span class="method PUT">PUT</span>
+                    /users/password
+                </h3>
+                <p class="description">Change password</p>
+                <p class="path">https://api.telemedicine.moscow/v1/users/password</p>
+            </div>
+
+            <div class="endpoint" id="users_preferences_get_11">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /users/preferences
+                </h3>
+                <p class="description">Get preferences</p>
+                <p class="path">https://api.telemedicine.moscow/v1/users/preferences</p>
+            </div>
+
+            <div class="endpoint" id="users_preferences_put_12">
+                <h3>
+                    <span class="method PUT">PUT</span>
+                    /users/preferences
+                </h3>
+                <p class="description">Update preferences</p>
+                <p class="path">https://api.telemedicine.moscow/v1/users/preferences</p>
+            </div>
+
+            <div class="endpoint" id="doctors_get_13">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /doctors
+                </h3>
+                <p class="description">List doctors</p>
+                <p class="path">https://api.telemedicine.moscow/v1/doctors</p>
+            </div>
+
+            <div class="endpoint" id="doctors_doctor_id_get_14">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /doctors/{doctor_id}
+                </h3>
+                <p class="description">Get doctor details</p>
+                <p class="path">https://api.telemedicine.moscow/v1/doctors/{doctor_id}</p>
+            </div>
+
+            <div class="endpoint" id="doctors_doctor_id_availability_get_15">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /doctors/{doctor_id}/availability
+                </h3>
+                <p class="description">Get availability</p>
+                <p class="path">https://api.telemedicine.moscow/v1/doctors/{doctor_id}/availability</p>
+            </div>
+
+            <div class="endpoint" id="doctors_doctor_id_reviews_get_16">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /doctors/{doctor_id}/reviews
+                </h3>
+                <p class="description">Get reviews</p>
+                <p class="path">https://api.telemedicine.moscow/v1/doctors/{doctor_id}/reviews</p>
+            </div>
+
+            <div class="endpoint" id="doctors_register_post_17">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /doctors/register
+                </h3>
+                <p class="description">Register as doctor</p>
+                <p class="path">https://api.telemedicine.moscow/v1/doctors/register</p>
+            </div>
+
+            <div class="endpoint" id="doctors_profile_put_18">
+                <h3>
+                    <span class="method PUT">PUT</span>
+                    /doctors/profile
+                </h3>
+                <p class="description">Update doctor profile</p>
+                <p class="path">https://api.telemedicine.moscow/v1/doctors/profile</p>
+            </div>
+
+            <div class="endpoint" id="patients_profile_get_19">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /patients/profile
+                </h3>
+                <p class="description">Get patient profile</p>
+                <p class="path">https://api.telemedicine.moscow/v1/patients/profile</p>
+            </div>
+
+            <div class="endpoint" id="patients_profile_put_20">
+                <h3>
+                    <span class="method PUT">PUT</span>
+                    /patients/profile
+                </h3>
+                <p class="description">Update patient profile</p>
+                <p class="path">https://api.telemedicine.moscow/v1/patients/profile</p>
+            </div>
+
+            <div class="endpoint" id="patients_medical-records_get_21">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /patients/medical-records
+                </h3>
+                <p class="description">Get medical records</p>
+                <p class="path">https://api.telemedicine.moscow/v1/patients/medical-records</p>
+            </div>
+
+            <div class="endpoint" id="appointments_book_post_22">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /appointments/book
+                </h3>
+                <p class="description">Book appointment</p>
+                <p class="path">https://api.telemedicine.moscow/v1/appointments/book</p>
+            </div>
+
+            <div class="endpoint" id="appointments_get_23">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /appointments
+                </h3>
+                <p class="description">List appointments</p>
+                <p class="path">https://api.telemedicine.moscow/v1/appointments</p>
+            </div>
+
+            <div class="endpoint" id="appointments_appointment_id_get_24">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /appointments/{appointment_id}
+                </h3>
+                <p class="description">Get appointment</p>
+                <p class="path">https://api.telemedicine.moscow/v1/appointments/{appointment_id}</p>
+            </div>
+
+            <div class="endpoint" id="appointments_appointment_id_reschedule_put_25">
+                <h3>
+                    <span class="method PUT">PUT</span>
+                    /appointments/{appointment_id}/reschedule
+                </h3>
+                <p class="description">Reschedule appointment</p>
+                <p class="path">https://api.telemedicine.moscow/v1/appointments/{appointment_id}/reschedule</p>
+            </div>
+
+            <div class="endpoint" id="appointments_appointment_id_delete_26">
+                <h3>
+                    <span class="method DELETE">DELETE</span>
+                    /appointments/{appointment_id}
+                </h3>
+                <p class="description">Cancel appointment</p>
+                <p class="path">https://api.telemedicine.moscow/v1/appointments/{appointment_id}</p>
+            </div>
+
+            <div class="endpoint" id="appointments_appointment_id_complete_post_27">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /appointments/{appointment_id}/complete
+                </h3>
+                <p class="description">Complete appointment</p>
+                <p class="path">https://api.telemedicine.moscow/v1/appointments/{appointment_id}/complete</p>
+            </div>
+
+            <div class="endpoint" id="video-calls_initialize_post_28">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /video-calls/initialize
+                </h3>
+                <p class="description">Initialize video call</p>
+                <p class="path">https://api.telemedicine.moscow/v1/video-calls/initialize</p>
+            </div>
+
+            <div class="endpoint" id="video-calls_call_session_id_stats_get_29">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /video-calls/{call_session_id}/stats
+                </h3>
+                <p class="description">Get call stats</p>
+                <p class="path">https://api.telemedicine.moscow/v1/video-calls/{call_session_id}/stats</p>
+            </div>
+
+            <div class="endpoint" id="video-calls_call_session_id_end_post_30">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /video-calls/{call_session_id}/end
+                </h3>
+                <p class="description">End call</p>
+                <p class="path">https://api.telemedicine.moscow/v1/video-calls/{call_session_id}/end</p>
+            </div>
+
+            <div class="endpoint" id="video-calls_call_session_id_record_post_31">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /video-calls/{call_session_id}/record
+                </h3>
+                <p class="description">Record call</p>
+                <p class="path">https://api.telemedicine.moscow/v1/video-calls/{call_session_id}/record</p>
+            </div>
+
+            <div class="endpoint" id="prescriptions_create_post_32">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /prescriptions/create
+                </h3>
+                <p class="description">Create prescription</p>
+                <p class="path">https://api.telemedicine.moscow/v1/prescriptions/create</p>
+            </div>
+
+            <div class="endpoint" id="prescriptions_get_33">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /prescriptions
+                </h3>
+                <p class="description">List prescriptions</p>
+                <p class="path">https://api.telemedicine.moscow/v1/prescriptions</p>
+            </div>
+
+            <div class="endpoint" id="prescriptions_prescription_id_get_34">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /prescriptions/{prescription_id}
+                </h3>
+                <p class="description">Get prescription</p>
+                <p class="path">https://api.telemedicine.moscow/v1/prescriptions/{prescription_id}</p>
+            </div>
+
+            <div class="endpoint" id="prescriptions_prescription_id_download_post_35">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /prescriptions/{prescription_id}/download
+                </h3>
+                <p class="description">Download prescription</p>
+                <p class="path">https://api.telemedicine.moscow/v1/prescriptions/{prescription_id}/download</p>
+            </div>
+
+            <div class="endpoint" id="medical-records_upload_post_36">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /medical-records/upload
+                </h3>
+                <p class="description">Upload medical record</p>
+                <p class="path">https://api.telemedicine.moscow/v1/medical-records/upload</p>
+            </div>
+
+            <div class="endpoint" id="medical-records_get_37">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /medical-records
+                </h3>
+                <p class="description">List medical records</p>
+                <p class="path">https://api.telemedicine.moscow/v1/medical-records</p>
+            </div>
+
+            <div class="endpoint" id="medical-records_record_id_delete_38">
+                <h3>
+                    <span class="method DELETE">DELETE</span>
+                    /medical-records/{record_id}
+                </h3>
+                <p class="description">Delete record</p>
+                <p class="path">https://api.telemedicine.moscow/v1/medical-records/{record_id}</p>
+            </div>
+
+            <div class="endpoint" id="payments_process_post_39">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /payments/process
+                </h3>
+                <p class="description">Process payment</p>
+                <p class="path">https://api.telemedicine.moscow/v1/payments/process</p>
+            </div>
+
+            <div class="endpoint" id="payments_history_get_40">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /payments/history
+                </h3>
+                <p class="description">Payment history</p>
+                <p class="path">https://api.telemedicine.moscow/v1/payments/history</p>
+            </div>
+
+            <div class="endpoint" id="payments_refund_post_41">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /payments/refund
+                </h3>
+                <p class="description">Request refund</p>
+                <p class="path">https://api.telemedicine.moscow/v1/payments/refund</p>
+            </div>
+
+            <div class="endpoint" id="payments_invoices_invoice_id_get_42">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /payments/invoices/{invoice_id}
+                </h3>
+                <p class="description">Get invoice</p>
+                <p class="path">https://api.telemedicine.moscow/v1/payments/invoices/{invoice_id}</p>
+            </div>
+
+            <div class="endpoint" id="admin_dashboard_get_43">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /admin/dashboard
+                </h3>
+                <p class="description">Admin dashboard</p>
+                <p class="path">https://api.telemedicine.moscow/v1/admin/dashboard</p>
+            </div>
+
+            <div class="endpoint" id="admin_doctors_pending_get_44">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /admin/doctors/pending
+                </h3>
+                <p class="description">Pending approvals</p>
+                <p class="path">https://api.telemedicine.moscow/v1/admin/doctors/pending</p>
+            </div>
+
+            <div class="endpoint" id="admin_doctors_application_id_approve_post_45">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /admin/doctors/{application_id}/approve
+                </h3>
+                <p class="description">Approve doctor</p>
+                <p class="path">https://api.telemedicine.moscow/v1/admin/doctors/{application_id}/approve</p>
+            </div>
+
+            <div class="endpoint" id="admin_doctors_application_id_reject_post_46">
+                <h3>
+                    <span class="method POST">POST</span>
+                    /admin/doctors/{application_id}/reject
+                </h3>
+                <p class="description">Reject doctor</p>
+                <p class="path">https://api.telemedicine.moscow/v1/admin/doctors/{application_id}/reject</p>
+            </div>
+
+            <div class="endpoint" id="admin_payments_report_get_47">
+                <h3>
+                    <span class="method GET">GET</span>
+                    /admin/payments/report
+                </h3>
+                <p class="description">Payment report</p>
+                <p class="path">https://api.telemedicine.moscow/v1/admin/payments/report</p>
+            </div>
+
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Generated on 2026-05-05 04:20:24</p>
+            <p>Telemedicine Platform API v1.0</p>
+        </div>
+    </div>
+</body>
+</html>

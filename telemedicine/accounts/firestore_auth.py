@@ -94,8 +94,23 @@ class FirestoreBackend:
             return None
             
         import firebase_admin.auth
+        import firebase_admin
         try:
-            decoded_token = firebase_admin.auth.verify_id_token(token)
+            # Ensure Firebase is initialized
+            if not firebase_admin._apps:
+                from telemedicine.firebase_setup import initialize_firebase
+                initialize_firebase()
+            
+            # Verify token with clock skew tolerance
+            try:
+                decoded_token = firebase_admin.auth.verify_id_token(token, clock_skew_seconds=10)
+            except firebase_admin.auth.InvalidIdTokenError as e:
+                if "Token used too early" in str(e) or "token is not yet valid" in str(e).lower():
+                    print(f"⚠️ FirestoreBackend: Token clock skew detected, retrying with increased tolerance")
+                    # Retry with larger clock_skew
+                    decoded_token = firebase_admin.auth.verify_id_token(token, clock_skew_seconds=30)
+                else:
+                    raise
             uid = decoded_token['uid']
             
             # Fetch user from Firestore
@@ -105,8 +120,13 @@ class FirestoreBackend:
                 return FirestoreUser(uid, doc.to_dict())
             else:
                 return None
+        except firebase_admin.auth.InvalidIdTokenError as e:
+            print(f"❌ FirestoreBackend: Invalid token - {str(e)}")
+            return None
         except Exception as e:
-            print("FirestoreBackend auth error:", e)
+            print(f"❌ FirestoreBackend auth error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
 
     def get_user(self, user_id):

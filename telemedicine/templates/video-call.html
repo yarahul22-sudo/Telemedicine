@@ -1,0 +1,733 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} | TeleMed{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --call-bg: #0F172A;
+        --sidebar-bg: #1E293B;
+        --accent-primary: #6366F1;
+        --accent-secondary: #A855F7;
+    }
+
+    body { background-color: var(--call-bg); color: white; overflow: hidden; }
+    header, footer { display: none; } /* Immersive mode */
+
+    .video-call-layout {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        height: 100vh;
+        padding: 1.5rem;
+        gap: 1.5rem;
+    }
+
+    /* Main Video Section */
+    .main-video-area {
+        position: relative;
+        background: #020617;
+        border-radius: 32px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    #remote-media video {
+        width: 100%; height: 100%; object-fit: cover;
+    }
+
+    #local-media {
+        position: absolute;
+        bottom: 2rem; right: 2rem;
+        width: 240px; height: 160px;
+        background: #1E293B;
+        border-radius: 20px;
+        border: 2px solid rgba(255,255,255,0.1);
+        overflow: hidden;
+        box-shadow: var(--shadow-2xl);
+        z-index: 100;
+        transition: all 0.3s ease;
+    }
+
+    #local-media video { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Controls Bar */
+    .call-controls {
+        position: absolute;
+        bottom: 2.5rem; left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 1.25rem;
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(20px);
+        padding: 1.25rem 2.5rem;
+        border-radius: 100px;
+        border: 1px solid rgba(255,255,255,0.1);
+        z-index: 200;
+    }
+
+    .control-btn {
+        width: 56px; height: 56px;
+        border-radius: 50%;
+        border: none;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.4rem;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: rgba(255,255,255,0.1);
+        color: white;
+    }
+
+    .control-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.1) translateY(-2px); }
+    .control-btn.muted  { background: #EF4444; }
+    .control-btn.audio-only-active { background: #10B981; }
+    .control-btn.end-call { background: #EF4444; width: 72px; font-size: 1.6rem; }
+    .control-btn.end-call:hover { background: #DC2626; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+
+    /* Call timer in status bar */
+    #call-timer { font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
+
+    /* Right Sidebar (Chat & Files) */
+    .call-sidebar {
+        background: var(--sidebar-bg);
+        border-radius: 32px;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(255,255,255,0.05);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    }
+
+    .sidebar-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .chat-messages {
+        flex: 1;
+        padding: 1.5rem;
+        overflow-y: auto;
+        display: flex; flex-direction: column; gap: 1rem;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.1) transparent;
+    }
+
+    .msg {
+        max-width: 85%; padding: 0.8rem 1.25rem;
+        border-radius: 18px; font-size: 0.95rem; line-height: 1.5;
+    }
+    .msg-me { align-self: flex-end; background: var(--accent-primary); color: white; border-bottom-right-radius: 4px; }
+    .msg-them { align-self: flex-start; background: rgba(255,255,255,0.05); color: #E2E8F0; border-bottom-left-radius: 4px; }
+
+    .msg-file { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; color: inherit; }
+    .msg-file i { font-size: 1.5rem; }
+
+    .chat-input-area {
+        padding: 1.5rem;
+        background: rgba(15, 23, 42, 0.3);
+        display: flex; gap: 0.75rem; align-items: center;
+    }
+
+    .chat-input-area input {
+        flex: 1; background: #0F172A; border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 100px; padding: 0.8rem 1.5rem; color: white; outline: none;
+    }
+
+    .file-btn { color: #94A3B8; cursor: pointer; font-size: 1.25rem; transition: color 0.2s; }
+    .file-btn:hover { color: white; }
+
+    /* Status & Alerts */
+    .status-badge {
+        position: absolute; top: 2rem; left: 2rem;
+        background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(10px);
+        padding: 0.6rem 1.2rem; border-radius: 100px;
+        display: flex; align-items: center; gap: 0.75rem; z-index: 150;
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #10B981; }
+    .dot-pulse { animation: dotPulse 2s infinite; }
+
+    @keyframes dotPulse {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="video-call-layout">
+    <div class="main-video-area">
+        <!-- Status -->
+        <div class="status-badge">
+            <div class="dot dot-pulse" id="status-dot"></div>
+            <span id="call-status">Initializing...</span>
+            <span id="call-timer" style="opacity:0.7; font-size:0.85rem;"></span>
+        </div>
+
+        <!-- Waiting state shown in remote-media until participant joins -->
+
+        <!-- Waiting / Audio-only avatar -->
+        <div id="remote-media" style="width: 100%; height: 100%;">
+            <div id="waitingPlaceholder" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748B;">
+                <div style="width: 150px; height: 150px; border-radius: 50%; border: 2px solid rgba(99, 102, 241, 0.2); display: flex; align-items: center; justify-content: center; margin-bottom: 2rem; animation: pulse 2s infinite;">
+                    <i id="waitingIcon" class="fa-solid fa-user-pulse" style="font-size: 4rem; color: var(--accent-primary);"></i>
+                </div>
+                <h3 id="participant-status">Waiting for participant...</h3>
+                <p id="audioCallLabel" style="display:none; margin-top:0.75rem; color:#818CF8; font-size:0.9rem;"><i class="fa-solid fa-phone-volume" style="margin-right:6px;"></i>Audio Call in Progress</p>
+            </div>
+        </div>
+
+        <!-- Local Video -->
+        <div id="local-media"></div>
+
+        <!-- Media Controls -->
+        <div class="call-controls">
+            <!-- Mic toggle -->
+            <button id="btn-audio" class="control-btn" title="Mute Mic">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+            <!-- Camera toggle -->
+            <button id="btn-video" class="control-btn" title="Turn Off Camera">
+                <i class="fa-solid fa-video"></i>
+            </button>
+            <!-- Audio-only mode -->
+            <button id="btn-audio-only" class="control-btn" title="Switch to Audio Only">
+                <i class="fa-solid fa-phone"></i>
+            </button>
+            <!-- End call -->
+            <button id="btn-leave" class="control-btn end-call" title="End Call">
+                <i class="fa-solid fa-phone-slash"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Persistent Chat Sidebar -->
+    <div class="call-sidebar">
+        <div class="sidebar-header">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-weight: 800;">
+                    {{ appointment.patient_name|first }}
+                </div>
+                <div>
+                    <h4 style="margin: 0; font-size: 1rem;">Live Consultation Chat</h4>
+                    <p style="margin: 0; font-size: 0.75rem; color: #94A3B8;">Persistence Enabled</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+            <!-- Messages will load here via Firestore -->
+        </div>
+
+        <div class="chat-input-area">
+            <label class="file-btn" for="file-upload">
+                <i class="fa-solid fa-paperclip"></i>
+                <input type="file" id="file-upload" hidden accept="image/*,.pdf,.doc,.docx">
+            </label>
+            <input type="text" id="chat-input" placeholder="Message...">
+            <button id="btn-send" class="btn btn-primary" style="padding: 0; width: 42px; height: 42px; border-radius: 50%;">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="//sdk.twilio.com/js/video/releases/2.26.2/twilio-video.min.js"></script>
+<script>
+    const appointmentId = "{{ appointment.id }}";
+    const userId = "{{ user.uid }}";
+    const userName = "{{ user.first_name }}";
+    const userRole = "{{ user.role }}";
+    const isAudioOnly = new URLSearchParams(window.location.search).get('audio') === '1';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const localMedia = document.getElementById('local-media');
+        const remoteMedia = document.getElementById('remote-media');
+        const statusText = document.getElementById('call-status');
+        const chatContainer = document.getElementById('chat-messages');
+        
+        let activeRoom = null;
+
+        // 1. CHAT LOGIC (FIRESTORE)
+        const messagesRef = db.collection('appointments').doc(appointmentId).collection('messages');
+        
+        messagesRef.orderBy('timestamp', 'asc').onSnapshot(snap => {
+            chatContainer.innerHTML = '';
+            snap.forEach(doc => {
+                const data = doc.data();
+                const isMe = data.sender_id === userId;
+                const div = document.createElement('div');
+                div.className = `msg ${isMe ? 'msg-me' : 'msg-them'}`;
+                
+                if (data.type === 'file') {
+                    div.innerHTML = `<a href="${data.file_url}" target="_blank" class="msg-file">
+                        <i class="fa-solid ${data.file_type === 'image' ? 'fa-image' : 'fa-file-pdf'}"></i>
+                        <span>${data.file_name || 'Shared File'}</span>
+                    </a>`;
+                } else {
+                    div.textContent = data.text;
+                }
+                chatContainer.appendChild(div);
+            });
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
+
+        // Send Message
+        async function sendMsg(text, type = 'text', fileData = null) {
+            if (!text && !fileData) return;
+            await messagesRef.add({
+                sender_id: userId,
+                sender_name: userName,
+                text: text,
+                type: type,
+                ...fileData,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        document.getElementById('btn-send').onclick = () => {
+            const inp = document.getElementById('chat-input');
+            if(inp.value.trim()) { sendMsg(inp.value); inp.value = ''; }
+        };
+
+        document.getElementById('chat-input').onkeypress = (e) => {
+            if(e.key === 'Enter') document.getElementById('btn-send').click();
+        };
+
+        // File Sharing (Simulation since we don't have storage bucket access right now)
+        document.getElementById('file-upload').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            // In a real app, upload to Firebase Storage first. Here we simulate:
+            alert("File upload logic: In a production app, this would upload to Firebase Storage. Sending as a mock link for demo.");
+            sendMsg(null, 'file', {
+                file_url: 'https://via.placeholder.com/300', 
+                file_name: file.name,
+                file_type: file.type.startsWith('image/') ? 'image' : 'doc'
+            });
+        };
+
+        // ══════════════════════════════════════════
+        // 2. VIDEO CALL LOGIC (TWILIO)
+        // ══════════════════════════════════════════
+        let localTracks = [];   // keep reference for cleanup
+        let audioMuted   = false;
+        let videoMuted   = false;
+        let audioOnlyMode = false;
+        let callTimerInterval = null;
+        let callSeconds = 0;
+
+        function startCallTimer() {
+            callTimerInterval = setInterval(() => {
+                callSeconds++;
+                const m = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+                const s = String(callSeconds % 60).padStart(2, '0');
+                document.getElementById('call-timer').textContent = `${m}:${s}`;
+            }, 1000);
+        }
+
+        async function connectToCall(audioOnly = false) {
+            try {
+                statusText.textContent = audioOnly ? 'Connecting (Audio Only)…' : 'Connecting…';
+                
+                // Construct the correct API endpoint
+                const tokenEndpoint = `/api/appointments/${appointmentId}/video-token/`;
+                console.log(`Fetching token from: ${tokenEndpoint}`);
+                
+                const resp = await fetch(tokenEndpoint);
+                
+                if (!resp.ok) {
+                    const errorData = await resp.json();
+                    console.error('Token fetch error:', resp.status, errorData);
+                    statusText.textContent = `Connection failed: ${resp.status}`;
+                    throw new Error(`Failed to get token: ${errorData.error || resp.statusText}`);
+                }
+                
+                const data = await resp.json();
+                console.log('Token received:', data);
+                
+                if (!data.token || !data.room_name) {
+                    throw new Error('Invalid token response: missing token or room_name');
+                }
+
+                const trackConstraints = audioOnly
+                    ? { audio: true, video: false }
+                    : { audio: true, video: { width: 1280, height: 720 } };
+
+                console.log('Creating local tracks with constraints:', trackConstraints);
+                
+                // Enumerate devices to check availability
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const audioDevices = devices.filter(d => d.kind === 'audioinput').length;
+                    const videoDevices = devices.filter(d => d.kind === 'videoinput').length;
+                    console.log(`Available devices - Audio: ${audioDevices}, Video: ${videoDevices}`);
+                    
+                    if (!audioOnly && videoDevices === 0) {
+                        console.warn('No video devices found, switching to audio-only mode');
+                        trackConstraints.video = false;
+                        audioOnly = true;
+                    }
+                } catch (e) {
+                    console.warn('Could not enumerate devices:', e);
+                }
+                
+                // Stop any existing local tracks before creating new ones
+                if (localTracks.length > 0) {
+                    console.log('Stopping existing local tracks...');
+                    localTracks.forEach(t => {
+                        try {
+                            t.stop();
+                            t.detach().forEach(el => el.remove());
+                        } catch (_) {}
+                    });
+                    localTracks = [];
+                }
+                
+                localTracks = await Twilio.Video.createLocalTracks(trackConstraints);
+                console.log(`Created ${localTracks.length} local tracks`);
+
+                // Show local video preview
+                localTracks.forEach(track => {
+                    console.log(`Attaching ${track.kind} track`);
+                    if (track.kind === 'video') localMedia.appendChild(track.attach());
+                    if (track.kind === 'audio') {
+                        // Create hidden audio element for audio playback
+                        const audioEl = track.attach();
+                        audioEl.style.display = 'none';
+                        document.body.appendChild(audioEl);
+                    }
+                });
+
+                // Hide local preview if audio-only
+                if (audioOnly) {
+                    localMedia.style.display = 'none';
+                    document.getElementById('btn-video').style.display = 'none';
+                }
+
+                console.log(`Connecting to Twilio room: ${data.room_name} with identity: ${data.identity}`);
+                activeRoom = await Twilio.Video.connect(data.token, {
+                    name: data.room_name,
+                    tracks: localTracks,
+                    audio: { 
+                        name: 'speaker',
+                        autoGainControl: true,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    },
+                    video: {
+                        name: 'camera'
+                    },
+                    networkQuality: { local: 1, remote: 1 },
+                    preferredCodecs: [
+                        { codec: 'VP9', enable: true },
+                        { codec: 'VP8', enable: true },
+                        { codec: 'H264', enable: true }
+                    ],
+                    maxAudioBitrate: 50000,
+                    maxVideoBitrate: 2500000
+                });
+
+                console.log('Successfully connected to Twilio room');
+                statusText.textContent = 'Active Call';
+                startCallTimer();
+                
+                // Connect to existing participants
+                activeRoom.participants.forEach(participantConnected);
+                activeRoom.on('participantConnected', participantConnected);
+                activeRoom.on('participantDisconnected', p => {
+                    console.log('Participant disconnected:', p.sid);
+                    statusText.textContent = 'Participant left';
+                    document.getElementById('participant-status') &&
+                        (document.getElementById('participant-status').textContent = 'Waiting for re-join…');
+                });
+                
+                activeRoom.on('participantReconnecting', p => {
+                    console.log('Participant reconnecting:', p.sid);
+                    statusText.textContent = 'Reconnecting...';
+                });
+                
+                activeRoom.on('participantReconnected', p => {
+                    console.log('Participant reconnected:', p.sid);
+                    statusText.textContent = 'Connected';
+                });
+
+            } catch (e) {
+                statusText.textContent = 'Connection error';
+                console.error('Twilio connect error:', e);
+                console.error('Error stack:', e.stack);
+                
+                // Handle specific errors
+                if (e.message.includes('NotFoundError') || e.message.includes('Device not found')) {
+                    alert(`❌ No camera/microphone found.\n\nPlease:\n1. Check device is connected\n2. Grant browser permission\n3. Refresh and try again`);
+                } else if (e.message.includes('NotAllowedError') || e.message.includes('Permission denied')) {
+                    alert(`❌ Camera/microphone access denied.\n\nPlease:\n1. Check browser permissions\n2. Refresh page\n3. Grant access when prompted`);
+                } else if (e.message.includes('Device in use') || e.message.includes('NotReadableError')) {
+                    alert(`❌ Device in use (camera/microphone).\n\nPlease:\n1. Close other apps using camera\n2. Close other browser tabs\n3. Refresh and try again`);
+                } else {
+                    alert(`Video call connection failed:\n${e.message}\n\nPlease refresh and try again.`);
+                }
+                
+                // Clean up on error
+                try {
+                    stopAllLocalTracks();
+                    if (activeRoom) {
+                        activeRoom.disconnect();
+                        activeRoom = null;
+                    }
+                } catch (_) {}
+            }
+        }
+
+        function participantConnected(p) {
+            console.log('Participant connected:', p.sid, p.identity);
+            statusText.textContent = 'Connected';
+            const ps = document.getElementById('participant-status');
+            if (ps) ps.textContent = 'Connecting media…';
+            
+            // Subscribe to existing tracks
+            p.tracks.forEach(pub => { 
+                console.log(`Subscribing to ${pub.kind} track from ${p.identity}`);
+                if (pub.isSubscribed) {
+                    trackSubscribed(pub.track);
+                }
+            });
+            
+            // Subscribe to future tracks
+            p.on('trackSubscribed', track => {
+                console.log(`Track subscribed: ${track.kind} from ${p.identity}`);
+                trackSubscribed(track);
+            });
+            
+            p.on('trackUnsubscribed', track => {
+                console.log(`Track unsubscribed: ${track.kind}`);
+                track.detach().forEach(el => el.remove());
+            });
+        }
+
+        function trackSubscribed(track) {
+            console.log(`Attaching ${track.kind} track`);
+            // In audio-only mode, only attach audio tracks; don't clear waiting placeholder for audio
+            if (track.kind === 'video') {
+                remoteMedia.innerHTML = '';
+                const videoEl = track.attach();
+                remoteMedia.appendChild(videoEl);
+                console.log('Video element attached');
+            } else if (track.kind === 'audio') {
+                // Always attach audio - create hidden element for audio
+                const audioEl = track.attach();
+                audioEl.style.display = 'none';
+                remoteMedia.appendChild(audioEl);
+                console.log('Audio element attached');
+            }
+            
+            // Update status
+            const ps = document.getElementById('participant-status');
+            if (ps && track.kind === 'video') {
+                ps.textContent = 'Connected';
+            }
+        }
+
+        // ── Stop ALL local tracks (camera + mic hardware) ──
+        function stopAllLocalTracks() {
+            console.log('Stopping all local tracks...');
+            if (activeRoom) {
+                activeRoom.localParticipant.tracks.forEach(pub => {
+                    try {
+                        pub.track.stop();
+                        pub.track.detach().forEach(el => el.remove());
+                    } catch (e) {
+                        console.warn('Error stopping published track:', e);
+                    }
+                });
+            }
+            // Also stop any raw tracks not published yet
+            localTracks.forEach(t => { 
+                try { 
+                    t.stop(); 
+                    t.detach().forEach(el => el.remove());
+                } catch(e) {
+                    console.warn('Error stopping local track:', e);
+                }
+            });
+            localTracks = [];
+            console.log('All local tracks stopped');
+        }
+        
+        // ── Check and release device access ──
+        async function releaseDeviceAccess() {
+            console.log('Releasing device access...');
+            try {
+                // Stop all media tracks on the page
+                const allTracks = document.querySelectorAll('audio, video');
+                allTracks.forEach(el => {
+                    if (el.srcObject) {
+                        el.srcObject.getTracks().forEach(track => track.stop());
+                    }
+                });
+                console.log('Device access released');
+            } catch (e) {
+                console.warn('Error releasing device access:', e);
+            }
+        }
+
+        // ══════════════════════════════════════════
+        // 3. AUTO-CONNECT ON PAGE LOAD (BOTH ROLES)
+        // ══════════════════════════════════════════
+        // Apply audio-only UI immediately if param present
+        if (isAudioOnly) {
+            statusText.textContent = 'Audio Call';
+            document.getElementById('btn-video').style.display = 'none';
+            localMedia.style.display = 'none';
+            const lbl = document.getElementById('audioCallLabel');
+            if (lbl) lbl.style.display = 'block';
+            const icon = document.getElementById('waitingIcon');
+            if (icon) { icon.className = 'fa-solid fa-phone-volume'; icon.style.color = '#10B981'; }
+        }
+
+        // Attempt connection with retry logic
+        async function attemptConnection() {
+            try {
+                if (userRole === 'doctor') {
+                    statusText.textContent = isAudioOnly ? 'Starting Audio Call…' : 'Starting consultation…';
+                    await db.collection('appointments').doc(appointmentId).update({
+                        call_active: true,
+                        call_type: isAudioOnly ? 'audio' : 'video',
+                        call_started_at: firebase.firestore.FieldValue.serverTimestamp()
+                    }).catch(err => { 
+                        console.warn('Firestore update failed, continuing anyway:', err); 
+                    });
+                    await connectToCall(isAudioOnly);
+                } else {
+                    statusText.textContent = isAudioOnly ? 'Connecting (Audio)…' : 'Connecting to doctor…';
+                    await connectToCall(isAudioOnly);
+                }
+            } catch (e) {
+                console.error('Connection attempt failed:', e);
+                // Error is already handled in connectToCall
+            }
+        }
+
+        // Start initial connection attempt
+        window.addEventListener('load', () => {
+            console.log('Page loaded, initiating call connection');
+            attemptConnection();
+        });
+        
+        // Also try immediately in case page is already loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', attemptConnection);
+        } else {
+            attemptConnection();
+        }
+
+        // ══════════════════════════════════════════
+        // 4. END CALL — stop tracks then redirect
+        // ══════════════════════════════════════════
+        document.getElementById('btn-leave').onclick = async () => {
+            console.log('End call button clicked');
+            
+            // 1. Stop local camera + mic hardware
+            stopAllLocalTracks();
+            
+            // 2. Release device access
+            await releaseDeviceAccess();
+
+            // 3. Disconnect from Twilio room
+            if (activeRoom) {
+                activeRoom.disconnect();
+                activeRoom = null;
+            }
+
+            // 4. Stop timer
+            clearInterval(callTimerInterval);
+
+            // 5. Update Firestore (doctor only sets call_active false)
+            if (userRole === 'doctor') {
+                try {
+                    await db.collection('appointments').doc(appointmentId).update({ call_active: false });
+                } catch(e) { console.warn('Firestore cleanup error:', e); }
+            }
+
+            window.location.href = userRole === 'doctor' ? '/doctor-appointments/' : '/dashboard/';
+        };
+
+        // ══════════════════════════════════════════
+        // 5. MIC TOGGLE
+        // ══════════════════════════════════════════
+        document.getElementById('btn-audio').onclick = (e) => {
+            if (!activeRoom) return;
+            audioMuted = !audioMuted;
+            activeRoom.localParticipant.audioTracks.forEach(pub => {
+                audioMuted ? pub.track.disable() : pub.track.enable();
+            });
+            e.currentTarget.classList.toggle('muted', audioMuted);
+            e.currentTarget.title = audioMuted ? 'Unmute Mic' : 'Mute Mic';
+            e.currentTarget.innerHTML = audioMuted
+                ? '<i class="fa-solid fa-microphone-slash"></i>'
+                : '<i class="fa-solid fa-microphone"></i>';
+        };
+
+        // ══════════════════════════════════════════
+        // 6. CAMERA TOGGLE
+        // ══════════════════════════════════════════
+        document.getElementById('btn-video').onclick = (e) => {
+            if (!activeRoom) return;
+            videoMuted = !videoMuted;
+            activeRoom.localParticipant.videoTracks.forEach(pub => {
+                videoMuted ? pub.track.disable() : pub.track.enable();
+            });
+            // Hide/show local preview
+            localMedia.style.opacity = videoMuted ? '0' : '1';
+            e.currentTarget.classList.toggle('muted', videoMuted);
+            e.currentTarget.title = videoMuted ? 'Turn On Camera' : 'Turn Off Camera';
+            e.currentTarget.innerHTML = videoMuted
+                ? '<i class="fa-solid fa-video-slash"></i>'
+                : '<i class="fa-solid fa-video"></i>';
+        };
+
+        // ══════════════════════════════════════════
+        // 7. AUDIO-ONLY MODE TOGGLE
+        // ══════════════════════════════════════════
+        document.getElementById('btn-audio-only').onclick = async (e) => {
+            if (!activeRoom) return;
+            audioOnlyMode = !audioOnlyMode;
+            e.currentTarget.classList.toggle('audio-only-active', audioOnlyMode);
+            e.currentTarget.title = audioOnlyMode ? 'Switch Back to Video' : 'Switch to Audio Only';
+            e.currentTarget.innerHTML = audioOnlyMode
+                ? '<i class="fa-solid fa-video"></i>'   // show video icon (to switch back)
+                : '<i class="fa-solid fa-phone"></i>';
+
+            if (audioOnlyMode) {
+                // Disable + stop video tracks
+                activeRoom.localParticipant.videoTracks.forEach(pub => {
+                    pub.track.disable();
+                    pub.track.stop();
+                    pub.track.detach().forEach(el => el.remove());
+                });
+                localMedia.style.display = 'none';
+                document.getElementById('btn-video').style.display = 'none';
+                statusText.textContent = 'Audio Only';
+            } else {
+                // Re-create video track and re-publish
+                try {
+                    const videoTrack = await Twilio.Video.createLocalVideoTrack({ width: 1280, height: 720 });
+                    localTracks.push(videoTrack);
+                    localMedia.appendChild(videoTrack.attach());
+                    localMedia.style.display = 'block';
+                    document.getElementById('btn-video').style.display = 'flex';
+                    await activeRoom.localParticipant.publishTrack(videoTrack);
+                    statusText.textContent = 'Active Call';
+                } catch(err) {
+                    console.error('Could not re-enable camera:', err);
+                    audioOnlyMode = true; // revert toggle state
+                }
+            }
+        };
+    });
+</script>
+{% endblock %}

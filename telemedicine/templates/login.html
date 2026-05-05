@@ -139,18 +139,67 @@ document.getElementById('login-form').addEventListener('submit', async function(
     const password = document.getElementById('password').value;
 
     try {
+        console.log('🔐 Attempting login for:', email);
         const cred  = await firebase.auth().signInWithEmailAndPassword(email, password);
+        console.log('✅ Firebase login successful, UID:', cred.user.uid);
+        
         const token = await cred.user.getIdToken();
+        console.log('🔑 ID token received, length:', token.length);
+        console.log('🔑 Token preview:', token.substring(0, 50) + '...');
+        
+        // Store token in localStorage for API calls
+        localStorage.setItem('firebase_token', token);
+        console.log('💾 Token stored in localStorage');
+        
         const resp  = await fetch('/login/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
             body: JSON.stringify({ token })
         });
+        
         const data = await resp.json();
-        if (resp.ok) { window.location.href = data.redirect || '/dashboard/'; }
-        else { alert(data.error || 'Login failed'); btn.disabled = false; btn.innerHTML = orig; }
+        console.log('📥 Backend response:', resp.status, data);
+        
+        if (resp.ok) { 
+            console.log('✅ Login successful, redirecting...');
+            window.location.href = data.redirect || '/dashboard/'; 
+        } else { 
+            // Show detailed error message
+            let errorMsg = data.error || 'Login failed';
+            if (data.details) errorMsg += '\n\n' + data.details;
+            
+            console.error('❌ Login error:', resp.status, data);
+            
+            if (resp.status === 404) {
+                errorMsg = '❌ Account not found!\n\nYour email has not been registered yet.\n\nClick OK to go to the registration page.';
+                alert(errorMsg);
+                window.location.href = '/register/';
+            } else {
+                alert(errorMsg);
+            }
+            btn.disabled = false; 
+            btn.innerHTML = orig; 
+        }
     } catch (err) {
-        alert('Invalid email or password. Please try again.');
+        console.error('❌ Login error:', err.code, err.message);
+        let errorMsg = 'Login failed';
+        
+        if (err.code === 'auth/user-not-found') {
+            errorMsg = '❌ Account not found!\n\nThis email has not been registered.\n\nClick OK to register a new account.';
+            alert(errorMsg);
+            window.location.href = '/register/';
+        } else if (err.code === 'auth/wrong-password') {
+            errorMsg = '🔐 Invalid password. Please try again.';
+            alert(errorMsg);
+        } else if (err.code === 'auth/invalid-email') {
+            errorMsg = '✉️ Invalid email address.';
+            alert(errorMsg);
+        } else if (err.code === 'auth/too-many-requests') {
+            errorMsg = '⏱️ Too many login attempts. Please try again later.';
+            alert(errorMsg);
+        } else {
+            alert('❌ Login error: ' + err.message);
+        }
         btn.disabled = false;
         btn.innerHTML = orig;
     }

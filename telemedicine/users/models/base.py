@@ -7,6 +7,8 @@ class CustomUser(AbstractUser):
     Base user model that extends Django's AbstractUser
     All users (Patient, Doctor, Admin) inherit from this
     """
+    id = models.CharField(primary_key=True, max_length=128)
+    
     ROLE_CHOICES = [
         ('patient', 'Patient'),
         ('doctor', 'Doctor'),
@@ -45,3 +47,8 @@ class CustomUser(AbstractUser):
     
     def is_admin_user(self):
         return self.role == 'admin'
+    
+    @property
+    def uid(self):
+        """Alias for id (Firebase UID)"""
+        return self.id

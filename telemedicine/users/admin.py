@@ -50,13 +50,18 @@ class PatientProfileAdmin(admin.ModelAdmin):
 @admin.register(DoctorProfile)
 class DoctorProfileAdmin(admin.ModelAdmin):
     """Admin for DoctorProfile model"""
-    list_display = ('get_full_name', 'specialization', 'experience_years', 'rating', 'is_available', 'created_at')
-    list_filter = ('specialization', 'is_available', 'created_at', 'rating')
+    list_display = ('get_full_name', 'specialization', 'experience_years', 'is_approved', 'rating', 'is_available', 'created_at')
+    list_filter = ('specialization', 'is_available', 'is_approved', 'created_at', 'rating')
     search_fields = ('user__first_name', 'user__last_name', 'license_number', 'user__email')
     readonly_fields = ('created_at', 'updated_at', 'total_appointments')
+    actions = ['approve_doctors', 'reject_doctors']
     fieldsets = (
         ('User', {
             'fields': ('user',)
+        }),
+        ('Approval Status', {
+            'fields': ('is_approved',),
+            'classes': ('wide',)
         }),
         ('Professional Info', {
             'fields': ('specialization', 'license_number', 'qualification', 'experience_years')
@@ -64,8 +69,11 @@ class DoctorProfileAdmin(admin.ModelAdmin):
         ('Clinic Details', {
             'fields': ('clinic_address', 'clinic_phone', 'consultation_fee')
         }),
+        ('Availability', {
+            'fields': ('available_days', 'is_available')
+        }),
         ('Profile', {
-            'fields': ('profile_picture', 'bio', 'is_available')
+            'fields': ('profile_picture', 'bio')
         }),
         ('Performance', {
             'fields': ('rating', 'total_appointments')
@@ -79,6 +87,18 @@ class DoctorProfileAdmin(admin.ModelAdmin):
     def get_full_name(self, obj):
         return f"Dr. {obj.user.get_full_name()}"
     get_full_name.short_description = 'Doctor Name'
+    
+    def approve_doctors(self, request, queryset):
+        """Approve selected doctor registrations"""
+        count = queryset.update(is_approved=True)
+        self.message_user(request, f'{count} doctor(s) successfully approved.')
+    approve_doctors.short_description = '✓ Approve selected doctors'
+    
+    def reject_doctors(self, request, queryset):
+        """Reject selected doctor registrations"""
+        count = queryset.update(is_approved=False)
+        self.message_user(request, f'{count} doctor(s) marked as not approved.')
+    reject_doctors.short_description = '✗ Reject selected doctors'
 
 @admin.register(AdminProfile)
 class AdminProfileAdmin(admin.ModelAdmin):

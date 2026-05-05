@@ -5,7 +5,9 @@ from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.conf import settings
 from django.utils import timezone
-from datetime import timedelta
+from django.http import HttpResponse
+from datetime import timedelta, datetime
+import os
 from users.models.base import CustomUser
 from users.models.patient import PatientProfile
 from users.models.doctor import DoctorProfile
@@ -30,6 +32,7 @@ def register_view(request):
     if request.method == 'POST':
         import json
         import firebase_admin.auth
+        import firebase_admin
         from django.http import JsonResponse
         
         try:
@@ -39,10 +42,36 @@ def register_view(request):
             if not token:
                 return JsonResponse({'error': 'No authentication token provided'}, status=400)
                 
-            # Verify Firebase token
-            decoded_token = firebase_admin.auth.verify_id_token(token)
-            uid = decoded_token['uid']
+            # Ensure Firebase is initialized
+            if not firebase_admin._apps:
+                from telemedicine.firebase_setup import initialize_firebase
+                initialize_firebase()
+            
+            # Verify Firebase token with clock skew tolerance
+            try:
+                decoded_token = firebase_admin.auth.verify_id_token(token, check_revoked=False, clock_skew_seconds=10)
+            except firebase_admin.auth.InvalidIdTokenError as e:
+                error_msg = str(e)
+                # Handle clock skew errors more gracefully
+                if "Token used too early" in error_msg or "token is not yet valid" in error_msg.lower():
+                    print(f"⚠️ Clock skew detected, attempting with lenient verification: {error_msg}")
+                    # For registration, we can be slightly more lenient with clock skew
+                    # Re-attempt the verification with increased clock_skew_seconds
+                    try:
+                        decoded_token = firebase_admin.auth.verify_id_token(token, check_revoked=False, clock_skew_seconds=30)
+                    except Exception as e2:
+                        print(f"❌ Token verification failed even with retry: {e2}")
+                        return JsonResponse({
+                            'error': 'Token verification failed. Please try registering again.'
+                        }, status=401)
+                else:
+                    print(f"❌ Token verification failed: {error_msg}")
+                    return JsonResponse({'error': 'Invalid authentication token. Please try again.'}, status=401)
+            
+            uid = decoded_token.get('uid')
             email = decoded_token.get('email')
+            
+            print(f"✅ Token verified for registration: UID={uid}, Email={email}")
             
             if not email:
                 return JsonResponse({'error': 'Invalid token: No email found'}, status=400)
@@ -97,6 +126,7 @@ def register_view(request):
         'title': 'Register',
         'FIREBASE_API_KEY': settings.FIREBASE_API_KEY,
         'FIREBASE_AUTH_DOMAIN': settings.FIREBASE_AUTH_DOMAIN,
+        'FIREBASE_DATABASE_URL': getattr(settings, 'FIREBASE_DATABASE_URL', ''),
         'FIREBASE_PROJECT_ID': settings.FIREBASE_PROJECT_ID,
         'FIREBASE_STORAGE_BUCKET': settings.FIREBASE_STORAGE_BUCKET,
         'FIREBASE_MESSAGING_SENDER_ID': settings.FIREBASE_MESSAGING_SENDER_ID,
@@ -114,7 +144,9 @@ def login_view(request):
     if request.method == 'POST':
         import json
         import firebase_admin.auth
+        import firebase_admin
         from django.http import JsonResponse
+        import time
         
         try:
             data = json.loads(request.body)
@@ -123,22 +155,79 @@ def login_view(request):
             if not token:
                 return JsonResponse({'error': 'No authentication token provided'}, status=400)
                 
-            # Verify Firebase token
-            decoded_token = firebase_admin.auth.verify_id_token(token)
-            uid = decoded_token['uid']
+            # Verify Firebase token with detailed error handling
+            try:
+                # Ensure Firebase is initialized
+                if not firebase_admin._apps:
+                    from telemedicine.firebase_setup import initialize_firebase
+                    initialize_firebase()
+                
+                print(f"\n🔍 TOKEN VERIFICATION ATTEMPT")
+                print(f"   Token length: {len(token)}")
+                print(f"   Server timestamp: {int(time.time())}")
+                print(f"   Firebase apps initialized: {len(firebase_admin._apps)}")
+                
+                # Get the app and check credentials
+                try:
+                    app = list(firebase_admin._apps.values())[0]
+                    print(f"   Firebase app project ID: {app.project_id if hasattr(app, 'project_id') else 'Unknown'}")
+                except:
+                    pass
+                
+                # Try token verification with detailed error handling and clock skew tolerance
+                try:
+                    decoded_token = firebase_admin.auth.verify_id_token(token, check_revoked=False, clock_skew_seconds=10)
+                    print(f"✅ Token verified successfully (with clock_skew_seconds=10)!")
+                    print(f"   Decoded UID: {decoded_token.get('uid')}")
+                    print(f"   Decoded Email: {decoded_token.get('email')}")
+                except firebase_admin.auth.InvalidIdTokenError as e1:
+                    print(f"❌ Token verification failed (InvalidIdTokenError)")
+                    print(f"   Error details: {str(e1)}")
+                    print(f"   Error code: {getattr(e1, 'code', 'N/A')}")
+                    raise e1
+                except firebase_admin.auth.RevokedIdTokenError as e2:
+                    print(f"❌ Token revoked (RevokedIdTokenError)")
+                    print(f"   Error: {str(e2)}")
+                    raise e2
+                except Exception as e3:
+                    print(f"❌ Unexpected token verification error")
+                    print(f"   Error type: {type(e3).__name__}")
+                    print(f"   Error message: {str(e3)}")
+                    import traceback
+                    traceback.print_exc()
+                    raise e3
+                        
+            except firebase_admin.auth.InvalidIdTokenError as token_error:
+                print(f"❌ Final: Invalid Firebase token")
+                return JsonResponse({'error': 'Invalid Firebase token. Please try logging in again.'}, status=401)
+            except firebase_admin.auth.RevokedIdTokenError as token_error:
+                print(f"❌ Final: Token revoked")
+                return JsonResponse({'error': 'Your session has expired. Please login again.'}, status=401)
+            except Exception as token_error:
+                print(f"❌ Final: Authentication token error")
+                return JsonResponse({'error': 'Authentication token error. Please try again.'}, status=401)
+            
+            uid = decoded_token.get('uid')
             email = decoded_token.get('email')
             
-            if not email:
-                return JsonResponse({'error': 'Invalid token: No email found'}, status=400)
+            print(f"✅ Token decoded: UID={uid}, Email={email}")
+            
+            if not uid or not email:
+                return JsonResponse({'error': 'Invalid token: Missing user information'}, status=400)
 
             # Find user in Firestore via auth backend
             user = authenticate(request, token=token)
             if user is None:
-                return JsonResponse({'error': 'Account not found in local database. Please register.'}, status=404)
+                print(f"❌ User not found in Firestore for UID: {uid}, Email: {email}")
+                return JsonResponse({
+                    'error': f'Account not found in system. Please register first at /register/', 
+                    'details': f'Email {email} is not registered. Visit /register/ to create an account.'
+                }, status=404)
             
             # Force log the user in
             login(request, user, backend='accounts.firestore_auth.FirestoreBackend')
             
+            print(f"✅ User logged in successfully: {email}")
             return JsonResponse({'success': True, 'redirect': '/dashboard/'})
             
         except firebase_admin.auth.InvalidIdTokenError:
@@ -153,6 +242,7 @@ def login_view(request):
         'title': 'Login',
         'FIREBASE_API_KEY': settings.FIREBASE_API_KEY,
         'FIREBASE_AUTH_DOMAIN': settings.FIREBASE_AUTH_DOMAIN,
+        'FIREBASE_DATABASE_URL': getattr(settings, 'FIREBASE_DATABASE_URL', ''),
         'FIREBASE_PROJECT_ID': settings.FIREBASE_PROJECT_ID,
         'FIREBASE_STORAGE_BUCKET': settings.FIREBASE_STORAGE_BUCKET,
         'FIREBASE_MESSAGING_SENDER_ID': settings.FIREBASE_MESSAGING_SENDER_ID,
@@ -201,19 +291,42 @@ def dashboard(request):
         now = datetime.now()
         appointments_ref = db.collection('appointments')
         
+        def get_timestamp(app_date):
+            """Convert various date formats to timestamp"""
+            if not app_date:
+                return 0
+            if hasattr(app_date, 'timestamp'):
+                # Firestore Timestamp object
+                if callable(app_date.timestamp):
+                    return app_date.timestamp()
+                else:
+                    return app_date.timestamp
+            else:
+                # String or other format - try to parse
+                try:
+                    from dateutil import parser
+                    return parser.parse(str(app_date)).timestamp()
+                except:
+                    return 0
+        
         if request.user.role == 'patient':
             # Upcoming appointments
             upcoming_query = appointments_ref.where('patient_id', '==', request.user.uid).where('status', '==', 'scheduled').stream()
             upcoming = []
+            print(f"\n🔍 Dashboard: Fetching appointments for patient {request.user.uid}")
             for doc in upcoming_query:
                 app_data = doc.to_dict()
                 app_data['id'] = doc.id
-                # Only keep future appointments
-                if app_data.get('appointment_date') and app_data['appointment_date'].timestamp() >= now.timestamp():
+                app_timestamp = get_timestamp(app_data.get('appointment_date'))
+                print(f"   - Found appointment: {app_data.get('doctor_name', 'Unknown')} at {app_data.get('appointment_date')} (timestamp: {app_timestamp})")
+                print(f"   - Current time: {now.timestamp()}")
+                print(f"   - Is future? {app_timestamp >= now.timestamp()}")
+                if app_timestamp >= now.timestamp():
                     upcoming.append(app_data)
             
+            print(f"   - Total upcoming: {len(upcoming)}")
             # Sort by date
-            upcoming.sort(key=lambda x: x.get('appointment_date', datetime.max.timestamp()))
+            upcoming.sort(key=lambda x: get_timestamp(x.get('appointment_date')))
             context['upcoming_appointments'] = upcoming[:5]
             
             # Recent consultations
@@ -224,7 +337,7 @@ def dashboard(request):
                 app_data['id'] = doc.id
                 recent.append(app_data)
                 
-            recent.sort(key=lambda x: x.get('appointment_date', datetime.min.timestamp()), reverse=True)
+            recent.sort(key=lambda x: get_timestamp(x.get('appointment_date')), reverse=True)
             context['recent_consultations'] = recent[:5]
             
             # Prescriptions
@@ -244,10 +357,11 @@ def dashboard(request):
             for doc in upcoming_query:
                 app_data = doc.to_dict()
                 app_data['id'] = doc.id
-                if app_data.get('appointment_date') and app_data['appointment_date'].timestamp() >= now.timestamp():
+                app_timestamp = get_timestamp(app_data.get('appointment_date'))
+                if app_timestamp >= now.timestamp():
                     upcoming.append(app_data)
                     
-            upcoming.sort(key=lambda x: x.get('appointment_date', datetime.max.timestamp()))
+            upcoming.sort(key=lambda x: get_timestamp(x.get('appointment_date')))
             context['upcoming_appointments'] = upcoming[:5]
             
             # Recent consultations
@@ -258,7 +372,7 @@ def dashboard(request):
                 app_data['id'] = doc.id
                 recent.append(app_data)
                 
-            recent.sort(key=lambda x: x.get('appointment_date', datetime.min.timestamp()), reverse=True)
+            recent.sort(key=lambda x: get_timestamp(x.get('appointment_date')), reverse=True)
             context['recent_consultations'] = recent[:5]
             
     except Exception as e:
@@ -871,6 +985,7 @@ def video_call(request, appointment_id):
         
         # Verify access
         # Get all appointments for this patient
+        query = appointments_ref = db.collection('appointments')
         query = appointments_ref.where('patient_id', '==', request.user.uid).stream()
         
         all_appointments = []
